@@ -80,5 +80,6 @@ static const uint32_t sub_4[256] = {
 };
 
 void crypt(uint32_t *in, uint32_t *out, uint32_t *key);
+void crypt_yasv(uint32_t *in, uint32_t *out, uint32_t *key);
 
 #endif /* SUBSTITUTION_H_ */

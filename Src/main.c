@@ -1,5 +1,5 @@
 #include "utils.h"
-#include "substitution.h"
+#include "stb_cypher.h"
 
 int main()
 {
