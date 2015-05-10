@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#include <string.h>
 
 //Types:
 
@@ -27,5 +28,9 @@ uint32_t toSTBint(const uint32_t a);
 uint32_t rotHi(const uint32_t a, const int r);
 
 void roundDump(const uint32_t a, const uint32_t b, const uint32_t c, const uint32_t d);
+
+#define DUMP(a, b, c, d) roundDump(a, b, c, d)
+#undef DUMP
+#define DUMP(a, b, c, d)
 
 #endif //UTILS_H

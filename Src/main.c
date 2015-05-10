@@ -18,7 +18,11 @@ int main()
 	uint32_t out[4] = {0, 0, 0, 0};
 	uint32_t key[8] = {0xE9DEE72C, 0x8F0C0FA6, 0x2DDB49F4, 0x6F739647, 0x06075316, 0xED247A37, 0x39CBA383, 0x03A98BF6};
 
-	crypt(in, out, key);
+	crypt(in, key, out);
+	INFO("result:");
+	roundDump(out[0], out[1], out[2], out[3]);
+	INFO("================================");
+	crypt_yasv(in, key, out);
 	/*a = toSTBint(a);
 	key[0] = toSTBint(key[0]);
 	x = a + key[0];
