@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)	 # Проверка версии CMake.
 
 project(STB_34.101.31)			# Название проекта
 
-aux_source_directory("Src/cypher"	SRC_DIRS)
+aux_source_directory("Src/cipher"	SRC_DIRS)
 aux_source_directory("Src/utils" 	SRC_DIRS)
 aux_source_directory("Src" 		SRC_DIRS)
 

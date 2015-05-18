@@ -30,6 +30,11 @@ uint32_t rotHi(const uint32_t a, const int r)
 	return ((a << r) | (a >> (32 - r)));
 }
 
+uint32_t rotLo(const uint32_t a, const int r)
+{
+	return ((a >> r) ^ (a << (32 - r)));
+}
+
 void roundDump(const uint32_t a, const uint32_t b, const uint32_t c, const uint32_t d)
 {
 	printf("%8c %8c %8c %8c\n", 'a', 'b', 'c', 'd');

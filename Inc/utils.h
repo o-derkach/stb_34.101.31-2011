@@ -26,6 +26,7 @@ void generateBits(uint32_t *bits, int bitLen);
 
 uint32_t toSTBint(const uint32_t a);
 uint32_t rotHi(const uint32_t a, const int r);
+uint32_t rotLo(const uint32_t a, const int r);
 
 void roundDump(const uint32_t a, const uint32_t b, const uint32_t c, const uint32_t d);
 
