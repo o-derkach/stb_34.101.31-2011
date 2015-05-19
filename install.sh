@@ -17,3 +17,9 @@ RES=$?
 if [[ $RES != 0 ]]; then
 	sudo apt-get install libssl-dev
 fi
+
+gnuplot --version &> /dev/null
+RES=$?
+if [[ $RES != 0 ]]; then
+	sudo apt-get install gnuplot-x11
+fi

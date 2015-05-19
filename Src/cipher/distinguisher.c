@@ -51,8 +51,20 @@ static void countDk(const double * gi, double *dk, const uint32_t n)
 	}
 }
 
+static void antiFinalPerm(uint32_t * out)
+{
+	uint32_t x;
+	x = out[0];
+	out[0] = out[1];
+	out[1] = out[3];
+	out[3] = out[2];
+	out[2] = x;
+}
+
 void handDistinguisher()
 {
+	FILE * temp;
+	FILE * gnuplotPipe;
 	int code = 1;
 	uint32_t texts[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 	uint32_t a, b, c, d, a_f, b_f, c_f, d_f, carry, i, n;
@@ -63,6 +75,8 @@ void handDistinguisher()
 	uint32_t out[4] = {0, 0, 0, 0};
 	uint32_t out_f[4] = {0, 0, 0, 0};
 	uint32_t key[8] = {0xE9DEE72C, 0x8F0C0FA6, 0x2DDB49F4, 0x6F739647, 0x06075316, 0xED247A37, 0x39CBA383, 0x03A98BF6};
+
+	char * commandsForGnuplot[] = {"set boxwidth 0.1", "set xrange [-1:257] ", "plot 'data.temp' with boxes"};
 
 	for (n = 0; n < SBLOCK_NUMBERS; ++n)
 	{
@@ -75,11 +89,13 @@ void handDistinguisher()
 		printTexts(texts);
 		INFO("without fault:");
 		cryptWithFault(texts + 4 * n, key, out, 0, 0);
+		antiFinalPerm(out);
 		a = out[0];
 		c = out[2];
 		INFO("fault in 0 bit:");
 		cryptWithFault(texts + 4 * n, key, out_f, 8, 0);
 		roundDump(out_f[0], out_f[1], out_f[2], out_f[3]);
+		antiFinalPerm(out_f);
 		a_f = out_f[0];
 		c_f = out_f[2];
 
@@ -90,23 +106,7 @@ void handDistinguisher()
 		c_f1 = toSTBint(c_f);
 		for (k = 0; k < SBLOCK_NUMBERS; ++k)
 		{
-			/*printf("a1 = %X\n", a1);
-			printf("a_f1 = %X\n", a_f1);
-			printf("c1 = %X\n", c1);
-			printf("c_f1 = %X\n", c_f1);
-			printf("k = %d\n", k);
-			printf("^ = %d\n", a1^a_f1);
-			printf("rot = %d\n", rotLo(a1 ^ a_f1, 21));
-			printf("rot &  = %d\n", rotLo(a1 ^ a_f1, 21) & 0xFF);
-			printf("c1 + k = %d\n", c1 + k);
-			printf("c1 + k & = %d\n", (c1 + k) & 0xFF);
-			printf("c_f1 + k = %d\n", c_f1 + k);
-			printf("c_f1 + k & = %d\n", (c_f1 + k) & 0xFF);
-			printf("sub = %d\n", sub_1[(c1 + k) & 0xFF]);
-			printf("sub_f = %d\n", sub_1[(c_f1 + k) & 0xFF]);*/
 			index = (rotLo(a1 ^ a_f1, 21) & 0xFF) ^ sub_1[(c1 + k) & 0xFF] ^ sub_1[(c_f1 + k) & 0xFF];
-			//printf("%d\n", index);
-			//scanf("%d");
 			g[index]++;
 		}
 		countDk(g, dk, n);
@@ -125,24 +125,18 @@ void handDistinguisher()
 		INFO("=================================================================");
 		if (n !=0)
 		{
-		char * commandsForGnuplot[] = {"set title \"TITLEEEEE\"", "plot 'data.temp'"};
-		FILE * temp = fopen("data.temp", "w");
-		    /*Opens an interface that one can use to send commands as if they were typing into the
-		     *     gnuplot command line.  "The -persistent" keeps the plot open even after your
-		     *     C program terminates.
-		     */
-		FILE * gnuplotPipe = popen ("gnuplot -persistent", "w");
-		for (k=0; k < SBLOCK_NUMBERS; k++)
-		{
-			fprintf(temp, "%lf\n", dk[k]); //Write the data to a temporary file
-		}
-
-		    for (i=0; i < 2; i++)
+			temp = fopen("data.temp", "w");
+			gnuplotPipe = popen ("gnuplot -p", "w");
+			for (k=0; k < SBLOCK_NUMBERS; k++)
+			{
+				fprintf(temp, "%d %lf\n", k, dk[k]); //Write the data to a temporary file
+			}
+			for (i=0; i < 3; i++)
 		    {
-		    fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
+				fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
 		    }
-		//fclose(temp);
-		//fclose(gnuplotPipe);
+		    fclose(temp);
+		    pclose(gnuplotPipe);
 		}
 		scanf("%d", &code);
 	}
