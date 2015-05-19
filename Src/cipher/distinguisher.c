@@ -34,19 +34,19 @@ void printTexts(uint32_t * texts)
 	}
 }
 
-static void countDk(const double * gi, double *dk, const uint32_t n)
+static void countDk(const double (*gi)[SBLOCK_NUMBERS], double *dk, const uint32_t n)
 {
-	uint32_t x, j;
+	uint32_t x, k;
 	const double mean = 1 / (double) SBLOCK_NUMBERS;
 	double a;
-	printf("mead = %f\n", mean);
-	for (j = 0; j < SBLOCK_NUMBERS; ++j)
+	//printf("mead = %f\n", mean);
+	for (k = 0; k < SBLOCK_NUMBERS; ++k)
 	{
-		dk[j] = 0;
+		dk[k] = 0;
 		for (x = 0; x < SBLOCK_NUMBERS; ++x)
 		{
-			a = (gi[j] / n) - mean;
-			dk[j] += a * a;
+			a = (gi[k][x] / n) - mean;
+			dk[k] += a * a;
 		}
 	}
 }
@@ -54,11 +54,11 @@ static void countDk(const double * gi, double *dk, const uint32_t n)
 static void antiFinalPerm(uint32_t * out)
 {
 	uint32_t x;
-	x = out[0];
-	out[0] = out[1];
-	out[1] = out[3];
-	out[3] = out[2];
-	out[2] = x;
+	x = out[1];
+	out[1] = out[0];
+	out[0] = out[2];
+	out[2] = out[3];
+	out[3] = x;
 }
 
 void handDistinguisher()
@@ -69,53 +69,55 @@ void handDistinguisher()
 	uint32_t texts[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 	uint32_t a, b, c, d, a_f, b_f, c_f, d_f, carry, i, n;
 	uint32_t a1, b1, c1, d1, a_f1, b_f1, c_f1, d_f1, k, k1, index;
-	double g[SBLOCK_NUMBERS];
+	double g[SBLOCK_NUMBERS][SBLOCK_NUMBERS];
 	double dk[SBLOCK_NUMBERS];
 
 	uint32_t out[4] = {0, 0, 0, 0};
 	uint32_t out_f[4] = {0, 0, 0, 0};
 	uint32_t key[8] = {0xE9DEE72C, 0x8F0C0FA6, 0x2DDB49F4, 0x6F739647, 0x06075316, 0xED247A37, 0x39CBA383, 0x03A98BF6};
 
-	char * commandsForGnuplot[] = {"set boxwidth 0.1", "set xrange [-1:257] ", "plot 'data.temp' with boxes"};
+	char title[16];
+	char * const_title = "set title";
+	char * commandsForGnuplot[] = {"set boxwidth 1", "set xrange [-1:257] ", "plot 'data.temp' with boxes"};
 
-	for (n = 0; n < SBLOCK_NUMBERS; ++n)
+	for (k = 0; k < SBLOCK_NUMBERS; ++k)
 	{
-		g[n] = 0;
+		for (n = 0; n < SBLOCK_NUMBERS; ++n)
+		{
+			g[k][n] = 0;
+		}
 	}
 
 	for (n = 0; n < MAX_TEXT_NUM && code != 0; ++n)
 	{
 		generateBytes(texts + 4 * n, BLOCK_BYTE_LEN);
-		printTexts(texts);
-		INFO("without fault:");
+		//printTexts(texts);
 		cryptWithFault(texts + 4 * n, key, out, 0, 0);
+		//INFO("FinalPerm:");
+		//roundDump(out[0], out[1], out[2], out[3]);
 		antiFinalPerm(out);
-		a = out[0];
-		c = out[2];
-		INFO("fault in 0 bit:");
+		INFO("antiFinalPerm:");
+		roundDump(out[0], out[1], out[2], out[3]);
+		a = out[2];
+		b = out[0];
+		//INFO("fault in 0 bit:");
 		cryptWithFault(texts + 4 * n, key, out_f, 8, 0);
-		roundDump(out_f[0], out_f[1], out_f[2], out_f[3]);
+		//roundDump(out_f[0], out_f[1], out_f[2], out_f[3]);
 		antiFinalPerm(out_f);
-		a_f = out_f[0];
-		c_f = out_f[2];
+		a_f = out_f[2];
+		b_f = out_f[0];
 
 		carry = 0;
 		a1 = toSTBint(a);
-		c1 = toSTBint(c);
+		b1 = toSTBint(b);
 		a_f1 = toSTBint(a_f);
-		c_f1 = toSTBint(c_f);
+		b_f1 = toSTBint(b_f);
 		for (k = 0; k < SBLOCK_NUMBERS; ++k)
 		{
-			index = (rotLo(a1 ^ a_f1, 21) & 0xFF) ^ sub_1[(c1 + k) & 0xFF] ^ sub_1[(c_f1 + k) & 0xFF];
-			g[index]++;
+			index = (rotLo(b1 ^ b_f1, 21) & 0xFF) ^ sub_1[(a1 + k) & 0xFF] ^ sub_1[(a_f1 + k) & 0xFF];
+			g[k][index]++;
 		}
 		countDk(g, dk, n);
-		INFO("G = ");
-		for (k = 0; k < SBLOCK_NUMBERS; ++k)
-		{
-			printf("%f ", g[k]);
-		}
-		printf("\n");
 		INFO("=================================================================");
 		for (k = 0; k < SBLOCK_NUMBERS; ++k)
 		{
@@ -129,8 +131,10 @@ void handDistinguisher()
 			gnuplotPipe = popen ("gnuplot -p", "w");
 			for (k=0; k < SBLOCK_NUMBERS; k++)
 			{
-				fprintf(temp, "%d %lf\n", k, dk[k]); //Write the data to a temporary file
+				fprintf(temp, "%d %f\n", k, dk[k]); //Write the data to a temporary file
 			}
+			sprintf(title, "%s \"%03d\"", const_title, n);
+			fprintf(gnuplotPipe, "%s \n", title); //Send commands to gnuplot one by one.
 			for (i=0; i < 3; i++)
 		    {
 				fprintf(gnuplotPipe, "%s \n", commandsForGnuplot[i]); //Send commands to gnuplot one by one.
@@ -140,4 +144,5 @@ void handDistinguisher()
 		}
 		scanf("%d", &code);
 	}
+	system("rm -f data.temp");
 }

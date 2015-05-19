@@ -194,6 +194,9 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 		c = toSTBint(c1);
 		DUMP(a, b, c, d);
 
+
+		roundDump(a, b, c, d);
+		INFO("FINAL PERMUTATION");
 		//10-12 step
 		x = a;
 		a = b;
@@ -206,7 +209,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 		x = b;
 		b = c;
 		c = x;
-		//roundDump(a, b, c, d);
+		roundDump(a, b, c, d);
 	}
 	out[0] = b;
 	out[1] = d;
