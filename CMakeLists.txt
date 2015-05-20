@@ -16,4 +16,6 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 add_executable(main ${SRC_DIRS})	# Создает исполняемый файл с именем main
 
-#target_link_libraries(main ${EXTRA_LIBS})
+find_library(M_LIB m)
+
+target_link_libraries(main ${M_LIB})
