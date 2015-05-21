@@ -78,7 +78,7 @@ static const uint32_t sub_4[SBLOCK_VAL_COUNT] = {
 	0xD4000000, 0xEF000000, 0xD9000000, 0xB4000000, 0x3A000000, 0x62000000, 0x28000000, 0x75000000, 0x91000000, 0x14000000, 0x10000000, 0xEA000000, 0x77000000, 0x6C000000, 0xDA000000, 0x1D000000
 };
 
-static uint32_t Gn(const uint32_t a, const int r)
+uint32_t Gn(const uint32_t a, const int r)
 {
 	return rotHi(sub_1[a & 0xFF] ^ sub_2[(a >> 8) & 0xFF] ^ sub_3[(a >> 16) & 0xFF] ^ sub_4[(a >> 24) & 0xFF], r);
 }
