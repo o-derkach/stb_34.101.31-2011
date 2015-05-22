@@ -131,7 +131,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 		d1 = toSTBint(d);
 		//1 step
 		x = a1 + k[7 * i - 7];
-		x = Gn(x, 5);
+		x = Gn(x, BLOCK_SHIFT_5);
 		//x = toSTBint(x); if uncomment this you MUST XOR with b in next line
 		b1 ^= x;
 		b = toSTBint(b1);
@@ -139,7 +139,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 
 		//2 step
 		x = d1 + k[7 * i - 6];
-		x = Gn(x, 21);
+		x = Gn(x, BLOCK_SHIFT_21);
 		//x =
 		c1 ^= x;
 		c = toSTBint(c1);
@@ -147,7 +147,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 
 		//3 step
 		x = b1 + k[7 * i - 5];
-		x = Gn(x, 13);
+		x = Gn(x, BLOCK_SHIFT_13);
 		//x =
 		a1 -= x;
 		a = toSTBint(a1);
@@ -155,7 +155,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 
 		//4 step
 		x = b1 + c1 + k[7 * i - 4];
-		x = Gn(x, 21);
+		x = Gn(x, BLOCK_SHIFT_21);
 		//x =
 		e = x ^ i;
 		DUMP(a, b, c, d);
@@ -173,7 +173,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 
 		//7 step
 		x = c1 + k[7 * i - 3];
-		x = Gn(x, 13);
+		x = Gn(x, BLOCK_SHIFT_13);
 		// x =
 		d1 += x;
 		d = toSTBint(d1);
@@ -181,7 +181,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 
 		//8 step
 		x = a1 + k[7 * i - 2];
-		x = Gn(x, 21);
+		x = Gn(x, BLOCK_SHIFT_21);
 		// x =
 		b1 ^= x;
 		b = toSTBint(b1);
@@ -189,7 +189,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 
 		//9 step
 		x = d1 + k[7 * i - 1];
-		x = Gn(x, 5);
+		x = Gn(x, BLOCK_SHIFT_5);
 		// x =
 		c1 ^= x;
 		c = toSTBint(c1);
@@ -236,24 +236,24 @@ void crypt_yasv(const uint32_t *in, const uint32_t *key, uint32_t *out)
 	{
 		//1 step
 		x = a + k[7 * i - 7];
-		x = Gn(x, 5);
+		x = Gn(x, BLOCK_SHIFT_5);
 		b ^= x;
 		DUMP(a, b, c, d);
 		//2 step
 		x = d + k[7 * i - 6];
-		x = Gn(x, 21);
+		x = Gn(x, BLOCK_SHIFT_21);
 		c ^= x;
 		DUMP(a, b, c, d);
 
 		//3 step
 		x = b + k[7 * i - 5];
-		x = Gn(x, 13);
+		x = Gn(x, BLOCK_SHIFT_13);
 		a -= x;
 		DUMP(a, b, c, d);
 
 		//4 step
 		x = b + c + k[7 * i - 4];
-		x = Gn(x, 21);
+		x = Gn(x, BLOCK_SHIFT_21);
 		e = x ^ i;
 		DUMP(a, b, c, d);
 		printf("e = 0x%8x\n", e);
@@ -268,19 +268,19 @@ void crypt_yasv(const uint32_t *in, const uint32_t *key, uint32_t *out)
 
 		//7 step
 		x = c + k[7 * i - 3];
-		x = Gn(x, 13);
+		x = Gn(x, BLOCK_SHIFT_13);
 		d += x;
 		DUMP(a, b, c, d);
 
 		//8 step
 		x = a + k[7 * i - 2];
-		x = Gn(x, 21);
+		x = Gn(x, BLOCK_SHIFT_21);
 		b ^= x;
 		DUMP(a, b, c, d);
 
 		//9 step
 		x = d + k[7 * i - 1];
-		x = Gn(x, 5);
+		x = Gn(x, BLOCK_SHIFT_5);
 		c ^= x;
 		DUMP(a, b, c, d);
 

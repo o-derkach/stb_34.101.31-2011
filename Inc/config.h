@@ -19,4 +19,8 @@
 
 #define MAX_TEXT_NUM 10000
 
+#define BLOCK_SHIFT_5  5
+#define BLOCK_SHIFT_13 13
+#define BLOCK_SHIFT_21 21
+
 #endif /* CONFIG_H_ */

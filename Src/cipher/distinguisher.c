@@ -26,10 +26,10 @@ void printTexts(uint32_t * texts)
 
 void plotData(const double arr[], const uint32_t size, const uint32_t name)
 {
-	/*FILE * temp = fopen("data.temp", "w");;
+	FILE * temp = fopen("data.temp", "w");;
 	FILE * gnuplotPipe = popen ("gnuplot -p", "w");
 
-	char title[16];
+	char title[17];
 	char * const_title = "set title";
 	char * commandsForGnuplot[] = {"set boxwidth 1", "set xrange [-1:257] ", "plot 'data.temp' with boxes"};
 	uint32_t i;
@@ -46,7 +46,7 @@ void plotData(const double arr[], const uint32_t size, const uint32_t name)
     }
     fclose(temp);
     pclose(gnuplotPipe);
-    system("rm -rf data.temp");*/
+    system("rm -rf data.temp");
 }
 
 static uint32_t countDk(double gi[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT], double *dk, const uint32_t n)
@@ -91,7 +91,8 @@ static void antiFinalPerm(uint32_t * out)
 static uint32_t carryCount(uint32_t a, uint32_t k, uint32_t shift)
 {
 	uint32_t tuda = 32 - shift;
-	return ((((a << tuda) >> tuda) + k) >> shift) & 1;
+	uint32_t suda = tuda;
+	return ((((a << tuda) >> suda) + k) >> shift) & 1;
 }
 
 static void waitInput()
@@ -122,9 +123,9 @@ void generateText(const uint32_t *key, const int round, const int position)
 	++maxTexts;
 }
 
-static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
-		const uint32_t inInd, const uint32_t outInd, const int shift,
-		const int round, const int position)
+static uint32_t distinguishRoundKey(const uint32_t key[], const int keyInd,
+		const int inInd, const int outInd, const int shift, const int round,
+		const int position)
 {
 	int n;
 	uint32_t out, in, out1, in1, out_f, in_f, out_f1, in_f1, carry, carry_f, i;
@@ -219,11 +220,13 @@ static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
 }
 
 static uint32_t distinguishSimpleRoundKey(const uint32_t key[],
-		const uint32_t keyInd_1, const uint32_t keyInd_2, const uint32_t inInd,
-		const uint32_t outInd, const int shift_1, const int shift_2) {
+		const int keyInd_1, const int keyInd_2, const int inInd,
+		const int outInd, const int shift_1, const int shift_2)
+{
 	int n;
-	uint32_t out, in, out_f, in_f, sum, cut_sum, carry, carry_f, i;
-	uint32_t k, k_d, index, octet;
+	uint32_t out, in, out_f, in_f, in1, in_f1, sum, cut_sum, carry, carry_f, i;
+	uint32_t k, k_d, octet;
+	uint16_t a, b, index;
 	char keyInfo[21];
 	char distKey[17];
 
@@ -235,26 +238,39 @@ static uint32_t distinguishSimpleRoundKey(const uint32_t key[],
 	out_f = toSTBint(pair_fault[outInd]);
 	sum = in;
 	in = Gn(in + toSTBint(key[keyInd_1]), shift_1) ^ out;
-	sum += in_f;
+	sum -= in_f;
 	in_f = Gn(in_f + toSTBint(key[keyInd_1]), shift_1) ^ out_f;
+	//printf("0x%08X 0x%08X\n", in, in_f);
 	sum = rotLo(sum, shift_2);
 
 	k_d = 0;
 	carry = carry_f = 0;
 	for (i = 0; i < ROUNDKEY_BIT_LEN / 8; ++i)
 	{
-		if (i != 0) {
+		if (i != 0)
+		{
 			carry = carryCount(in, k_d, 8 * i);
 			carry_f = carryCount(in_f, k_d, 8 * i);
 		}
-		in = ((in >> (8 * i)) + carry) & 0xFF;
-		in_f = ((in_f >> (8 * i)) + carry_f) & 0xFF;
+		in1 = ((in >> (8 * i)) + carry) & 0xFF;
+		in_f1 = ((in_f >> (8 * i)) + carry_f) & 0xFF;
 		cut_sum = (sum >> (8 * i)) & 0xFF;
-		for (k = 0; k < SBLOCK_VAL_COUNT; ++k) {
-			index = (sub_1[(in + k) & 0xFF] + sub_1[(in_f + k) & 0xFF]) & 0xFF;
+		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
+		{
+			a = sub_1[(in1 + k) & 0xFF];
+			b = sub_1[(in_f1 + k) & 0xFF];
+			index = a - b;
+			printf("index = 0x%X\n", index);
+			a = (a << shift_2) >> shift_2;
+			b = (b << shift_2) >> shift_2;
+			index = ((index >> shift_2) ^ (index << (16 - shift_2)));
+			index -= ((index >> 15) << shift_2) - ((a - b) >> (16 - shift_2));
+			printf("sum = 0x%X index = 0x%X\n", cut_sum, index);
 			if (index == cut_sum)
 				break;
+			waitInput();
 		}
+		printf("key = 0x%X\n", k);
 		k_d ^= k << (8 * i);
 		sprintf(keyInfo, "key xor = 0x%08X", key[keyInd_2] ^ toSTBint(k_d));
 		DEBUG(keyInfo);
@@ -271,9 +287,9 @@ void handDistinguisher()
 	INFO("key = ");
 	printf("0x%08X 0x%08X\n", key[6], key[7]);
 
-	key_d[6] = distinguishRoundKey(key, 6, 2, 0, 21, 8, 0);
-	key_d[7] = distinguishRoundKey(key, 7, 1, 3, 5, 8, 0);
-	key_d[5] = distinguishSimpleRoundKey(key, 7, 5, 1, 3, 5, 13);
+	key_d[6] = distinguishRoundKey(key, 6, 2, 0, BLOCK_SHIFT_21, 8, 0);
+	key_d[7] = distinguishRoundKey(key, 7, 1, 3, BLOCK_SHIFT_5, 8, 0);
+	key_d[5] = distinguishSimpleRoundKey(key, 7, 5, 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 	INFO("Total xor:")
 	printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);
 }
