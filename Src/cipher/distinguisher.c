@@ -9,7 +9,7 @@ uint32_t texts[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 uint32_t pair_crypt[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 uint32_t pair_fault[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 int maxTexts = 0;
-int exitCode = 1;
+int exitCode = 2;
 
 void printTexts(uint32_t * texts)
 {
@@ -26,7 +26,7 @@ void printTexts(uint32_t * texts)
 
 void plotData(const double arr[], const uint32_t size, const uint32_t name)
 {
-	FILE * temp = fopen("data.temp", "w");;
+	/*FILE * temp = fopen("data.temp", "w");;
 	FILE * gnuplotPipe = popen ("gnuplot -p", "w");
 
 	char title[16];
@@ -46,7 +46,7 @@ void plotData(const double arr[], const uint32_t size, const uint32_t name)
     }
     fclose(temp);
     pclose(gnuplotPipe);
-    system("rm -rf data.temp");
+    system("rm -rf data.temp");*/
 }
 
 static uint32_t countDk(double gi[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT], double *dk, const uint32_t n)
@@ -96,13 +96,19 @@ static uint32_t carryCount(uint32_t a, uint32_t k, uint32_t shift)
 
 static void waitInput()
 {
-	INFO("=================================================================");
-	printf("0 - exit;\n");
-	printf("1 - next 10 text;\n");
-	printf("2 - next 100 texts;\n");
-	printf("3 - next 1000 texts;\n>");
-	printf("3 - next octet;\n>");
-	scanf("%d", &exitCode);
+	do {
+		INFO("=================================================================");
+		printf("0 - exit;\n");
+		printf("1 - next 10 text;\n");
+		printf("2 - next 100 texts;\n");
+		printf("3 - next 1000 texts;\n");
+		printf("4 - next octet;\n");
+		printf("5 - close graphics;\n> ");
+		scanf("%d", &exitCode);
+		if (exitCode == 5)
+			system("./kill_gnu.sh");
+		INFO("=================================================================");
+	} while (exitCode == 5);
 }
 
 void generateText(const uint32_t *key, const int round, const int position)
@@ -125,11 +131,16 @@ static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
 	uint32_t k, k_d, index, octet;
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
 	double dk[SBLOCK_VAL_COUNT];
+	char keyInfo[21];
+	char distKey[17];
 
 	k_d = 0;
 	carry = carry_f = 0;
+	sprintf(distKey, "key = 0x%08X", key[keyInd]);
+	WARNING(distKey);
 	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
 	{
+		exitCode = 2;
 		// initialize g with 0
 		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 		{
@@ -138,7 +149,7 @@ static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
 				g[k][n] = 0;
 			}
 		}
-		for (n = 0; n < MAX_TEXT_NUM && exitCode != 3 && exitCode != 0; ++n)
+		for (n = 0; n < MAX_TEXT_NUM && exitCode != 4 && exitCode != 0; ++n)
 		{
 			// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
 			if (n == maxTexts)
@@ -169,16 +180,16 @@ static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
 			octet = countDk(g, dk, n + 1);
 			if (exitCode == 1)
 			{
-				printf("0x%02X\n", octet);
+				printf("0x%02X (< %d texts)\n", octet, n + 1);
 				plotData(dk, SBLOCK_VAL_COUNT, n + 1);
-				if ((n + 1) % 10 == 0)
+				//if ((n + 1) % 10 == 0)
 					waitInput();
 			}
 			else if (exitCode == 2)
 			{
 				if ((n + 1) % 10 == 0)
 				{
-					printf("0x%02X\n", octet);
+					printf("0x%02X (< %d texts)\n", octet, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 100 == 0)
@@ -188,7 +199,7 @@ static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
 			{
 				if ((n + 1) % 100 == 0)
 				{
-					printf("0x%02X\n", octet);
+					printf("0x%02X (< %d texts)\n", octet, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 1000 == 0)
@@ -201,166 +212,68 @@ static uint32_t distinguishRoundKey(const uint32_t key[], const uint32_t keyInd,
 		}
 		system("./kill_gnu.sh");
 		k_d ^= octet << (8 * i);
-		printf("key xor = 0x%08X\n", key[keyInd] ^ toSTBint(k_d));
+		sprintf(keyInfo, "key xor = 0x%08X", key[keyInd] ^ toSTBint(k_d));
+		DEBUG(keyInfo);
+	}
+	return k_d;
+}
+
+static uint32_t distinguishSimpleRoundKey(const uint32_t key[],
+		const uint32_t keyInd_1, const uint32_t keyInd_2, const uint32_t inInd,
+		const uint32_t outInd, const int shift_1, const int shift_2) {
+	int n;
+	uint32_t out, in, out_f, in_f, sum, cut_sum, carry, carry_f, i;
+	uint32_t k, k_d, index, octet;
+	char keyInfo[21];
+	char distKey[17];
+
+	sprintf(distKey, "key = 0x%08X", key[keyInd_2]);
+	WARNING(distKey);
+	in = toSTBint(pair_crypt[inInd]);
+	out = toSTBint(pair_crypt[outInd]);
+	in_f = toSTBint(pair_fault[inInd]);
+	out_f = toSTBint(pair_fault[outInd]);
+	sum = in;
+	in = Gn(in + toSTBint(key[keyInd_1]), shift_1) ^ out;
+	sum += in_f;
+	in_f = Gn(in_f + toSTBint(key[keyInd_1]), shift_1) ^ out_f;
+	sum = rotLo(sum, shift_2);
+
+	k_d = 0;
+	carry = carry_f = 0;
+	for (i = 0; i < ROUNDKEY_BIT_LEN / 8; ++i)
+	{
+		if (i != 0) {
+			carry = carryCount(in, k_d, 8 * i);
+			carry_f = carryCount(in_f, k_d, 8 * i);
+		}
+		in = ((in >> (8 * i)) + carry) & 0xFF;
+		in_f = ((in_f >> (8 * i)) + carry_f) & 0xFF;
+		cut_sum = (sum >> (8 * i)) & 0xFF;
+		for (k = 0; k < SBLOCK_VAL_COUNT; ++k) {
+			index = (sub_1[(in + k) & 0xFF] + sub_1[(in_f + k) & 0xFF]) & 0xFF;
+			if (index == cut_sum)
+				break;
+		}
+		k_d ^= k << (8 * i);
+		sprintf(keyInfo, "key xor = 0x%08X", key[keyInd_2] ^ toSTBint(k_d));
+		DEBUG(keyInfo);
 	}
 	return k_d;
 }
 
 void handDistinguisher()
 {
-	int exitCode = 2;
-	int n;
-	uint32_t a, b, c, d, a_f, b_f, c_f, d_f, carry, carry_f, i;
-	uint32_t a1, b1, c1, d1, a_f1, b_f1, c_f1, d_f1, k, index, octet;
-	uint32_t k_56, k_55;
-	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
-	double dk[SBLOCK_VAL_COUNT];
+//	uint32_t key[8] = {0xE9DEE72C, 0x8F0C0FA6, 0x2DDB49F4, 0x6F739647, 0x06075316, 0xED247A37, 0x39CBA383, 0x03A98BF6};
+	uint32_t key[8];
+	uint32_t key_d[8];
+	generateBytes(key, KEY_BYTE_LEN);
+	INFO("key = ");
+	printf("0x%08X 0x%08X\n", key[6], key[7]);
 
-	uint32_t out[4] = {0, 0, 0, 0};
-	uint32_t out_f[4] = {0, 0, 0, 0};
-	uint32_t key[8] = {0xE9DEE72C, 0x8F0C0FA6, 0x2DDB49F4, 0x6F739647, 0x06075316, 0xED247A37, 0x39CBA383, 0x03A98BF6};
-//	uint32_t key[8];
-//	generateBytes(key, KEY_BYTE_LEN);
-//	INFO("key = ");
-//	printf("0x%08X 0x%08X\n", key[6], key[7]);
-
-	k_55 = k_56 = 0;
-	carry = carry_f = 0;
-
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
-	{
-		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-		{
-			for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
-			{
-				g[k][n] = 0;
-			}
-		}
-		for (n = 0; n < MAX_TEXT_NUM && exitCode != 3 && exitCode != 0; ++n)
-		{
-			if (exitCode == 2)
-				generateBytes(texts + 4 * n, BLOCK_BYTE_LEN);
-			cryptWithFault(texts + 4 * n, key, out, 0, 0);
-			antiFinalPerm(out);
-			a = out[2];
-			b = out[0];
-			cryptWithFault(texts + 4 * n, key, out_f, 8, 0);
-			antiFinalPerm(out_f);
-			a_f = out_f[2];
-			b_f = out_f[0];
-			a1 = toSTBint(a);
-			b1 = toSTBint(b);
-			a_f1 = toSTBint(a_f);
-			b_f1 = toSTBint(b_f);
-
-			if (i != 0)
-			{
-				carry = carryCount(a1, k_55, 8 * i);
-				carry_f = carryCount(a_f1, k_55, 8 * i);
-			}
-			a1 = ((a1 >> (8 * i)) + carry) & 0xFF;
-			a_f1 = ((a_f1 >> (8 * i)) + carry_f) & 0xFF;
-			for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-			{
-				index = (rotLo(b1 ^ b_f1, 21) >> (8 * i)) & 0xFF;
-				index ^= sub_1[(a1 + k) & 0xFF] ^ sub_1[(a_f1 + k) & 0xFF];
-				g[k][index]++;
-			}
-			//INFO("=================================================================");
-			octet = countDk(g, dk, n + 1);
-			if (n != 0 && n % 100 == 0)
-			{
-				printf("0x%02X\n", octet);
-				plotData(dk, SBLOCK_VAL_COUNT, n + 1);
-			}
-			if (n != 0 && n % 1000 == 0)
-			{
-				printf("max texts = %d\n", maxTexts);
-				INFO("=================================================================");
-				printf("0 - exit;\n");
-				printf("1 - next texts;\n");
-				printf("2 - generate more;\n");
-				printf("3 - next octet;\n>");
-				scanf("%d", &exitCode);
-			}
-		}
-		if (exitCode == 3)
-		{
-			exitCode = 1;
-			if (maxTexts < n)
-				maxTexts = n;
-		}
-		system("./kill_gnu.sh");
-		k_55 ^= octet << (8 * i);
-		printf("key xor = 0x%08X\n", key[6] ^ toSTBint(k_55));
-	}
-	exitCode = 1;
-	carry = carry_f = 0;
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
-	{
-		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-		{
-			for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
-			{
-				g[k][n] = 0;
-			}
-		}
-		for (n = 0; n < MAX_TEXT_NUM && exitCode != 3 && exitCode != 0; ++n)
-		{
-			if (exitCode == 2)
-				generateBytes(texts + 4 * n, BLOCK_BYTE_LEN);
-			cryptWithFault(texts + 4 * n, key, out, 0, 0);
-			antiFinalPerm(out);
-			c = out[3];
-			d = out[1];
-			cryptWithFault(texts + 4 * n, key, out_f, 8, 0);
-			antiFinalPerm(out_f);
-			c_f = out_f[3];
-			d_f = out_f[1];
-			c1 = toSTBint(c);
-			d1 = toSTBint(d);
-			c_f1 = toSTBint(c_f);
-			d_f1 = toSTBint(d_f);
-
-			if (i != 0)
-			{
-				carry = carryCount(d1, k_56, 8 * i);
-				carry_f = carryCount(d_f1, k_56, 8 * i);
-			}
-			d1 = ((d1 >> (8 * i)) + carry) & 0xFF;
-			d_f1 = ((d_f1 >> (8 * i)) + carry_f) & 0xFF;
-			for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-			{
-				index = (rotLo(c1 ^ c_f1, 5) >> (8 * i)) & 0xFF;
-				index ^= sub_1[(d1 + k) & 0xFF] ^ sub_1[(d_f1 + k) & 0xFF];
-				g[k][index]++;
-			}
-			//INFO("=================================================================");
-			octet = countDk(g, dk, n + 1);
-			if (n != 0 && n % 10 == 0)
-			{
-				printf("0x%02X\n", octet);
-				plotData(dk, SBLOCK_VAL_COUNT, n + 1);
-			}
-			if (n != 0 && n % 100 == 0)
-			{
-				printf("max texts = %d\n", maxTexts);
-				INFO("=================================================================");
-				printf("0 - exit;\n");
-				printf("1 - next texts;\n");
-				printf("2 - generate more;\n");
-				printf("3 - next octet;\n>");
-				scanf("%d", &exitCode);
-			}
-		}
-		if (exitCode == 3)
-		{
-			exitCode = 1;
-			if (maxTexts < n)
-				maxTexts = n;
-		}
-		system("./kill_gnu.sh");
-		k_56 ^= octet << (8 * i);
-		printf("key xor = 0x%08X\n", key[7] ^ toSTBint(k_56));
-	}
+	key_d[6] = distinguishRoundKey(key, 6, 2, 0, 21, 8, 0);
+	key_d[7] = distinguishRoundKey(key, 7, 1, 3, 5, 8, 0);
+	key_d[5] = distinguishSimpleRoundKey(key, 7, 5, 1, 3, 5, 13);
+	INFO("Total xor:")
+	printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);
 }
