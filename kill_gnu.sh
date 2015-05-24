@@ -4,6 +4,6 @@
 for p in $(ps ax -o pid= -o comm | grep gnuplot)
 do
 	if [[ $p != "gnuplot" ]]; then
-		kill -15 $p
+		kill -15 $p &> /dev/null
 	fi
 done

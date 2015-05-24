@@ -17,7 +17,7 @@
 #define ROUNDKEY_NUM 56
 #define ROUNDKEY_BIT_LEN 32
 
-#define MAX_TEXT_NUM 10000
+#define MAX_TEXT_NUM 100000
 
 #define BLOCK_SHIFT_5  5
 #define BLOCK_SHIFT_13 13
