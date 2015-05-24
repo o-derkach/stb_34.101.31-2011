@@ -40,3 +40,9 @@ void roundDump(const uint32_t a, const uint32_t b, const uint32_t c, const uint3
 	printf("%8c %8c %8c %8c\n", 'a', 'b', 'c', 'd');
 	printf("%08X %08X %08X %08X\n", a, b, c, d);
 }
+
+void switchPlotting()
+{
+	INFO("Enable plotting? (!0 - yes, 0 - no)");
+	scanf("%d", &plotting);
+}

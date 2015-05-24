@@ -34,4 +34,7 @@ void roundDump(const uint32_t a, const uint32_t b, const uint32_t c, const uint3
 #undef DUMP
 #define DUMP(a, b, c, d)
 
+int plotting;
+void switchPlotting();
+
 #endif //UTILS_H

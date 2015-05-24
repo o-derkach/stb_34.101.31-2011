@@ -114,11 +114,11 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 			{
 				b ^= 1 << (position & 0x1F);
 			}
-			else if (position < 64)
+			else if (position < 96)
 			{
 				c ^= 1 << (position & 0x1F);
 			}
-			else if (position < 64)
+			else if (position < 128)
 			{
 				d ^= 1 << (position & 0x1F);
 			}
