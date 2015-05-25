@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "stb_cipher.h"
 #include "config.h"
+#include "distinguisher.h"
 #include <math.h>
 
 extern int plotting;
@@ -12,6 +13,7 @@ uint32_t pair_fault[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 static uint32_t key[8];
 int maxTexts = 0;
 int exitCode = 2;
+int globalPos;
 
 void printTexts(uint32_t * texts)
 {
@@ -243,7 +245,7 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 		const int inInd, const int outInd, const int shift, const int round,
 		const int position, FILE *f)
 {
-	int n, counter;
+	int n, counter, checked;
 	uint32_t out, in, out1, in1, out_f, in_f, out_f1, in_f1, carry, carry_f, i;
 	uint32_t k, k_d, index, octet;
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
@@ -251,51 +253,96 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 
 	k_d = 0;
 	carry = carry_f = 0;
+	checked = 0;
+	if (position != globalPos)
+	{
+		maxTexts = 0;
+		globalPos = position;
+	}
+	fprintf(f, "%2d", position);
 	for (i = 0; i < ROUNDKEY_BIT_LEN / 8; ++i)
 	{
-		counter = 0;
-		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
+		do
 		{
-			for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
-			{
-				g[k][n] = 0;
-			}
-		}
-		for (n = 0; n < MAX_TEXT_NUM && counter != 300; ++n)
-		{
-			// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
-			if (n == maxTexts)
-				generateText(round, position);
-			in = pair_crypt[4 * n + inInd];
-			out = pair_crypt[4 * n + outInd];
-			in_f = pair_fault[4 * n + inInd];
-			out_f = pair_fault[4 * n + outInd];
-			in1 = toSTBint(in);
-			out1 = toSTBint(out);
-			in_f1 = toSTBint(in_f);
-			out_f1 = toSTBint(out_f);
-
-			if (i != 0)
-			{
-				carry = carryCount(in1, k_d, 8 * i);
-				carry_f = carryCount(in_f1, k_d, 8 * i);
-			}
-			in1 = ((in1 >> (8 * i)) + carry) & 0xFF;
-			in_f1 = ((in_f1 >> (8 * i)) + carry_f) & 0xFF;
+			counter = 0;
 			for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 			{
-				index = (rotLo(out1 ^ out_f1, shift) >> (8 * i)) & 0xFF;
-				index ^= sub_1[(in1 + k) & 0xFF] ^ sub_1[(in_f1 + k) & 0xFF];
-				g[k][index]++;
+				for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
+				{
+					g[k][n] = 0;
+				}
 			}
-			//INFO("=================================================================");
-			octet = countDk(g, dk, n + 1);
-			if (octet == ((roundKey >> (8 * (3 - i))) & 0xFF))
-				++counter;
-			else
-				counter = 0;
-		}
-		fprintf(f, "\t%4d (%4d)", n, n - counter);
+			if (checked == 1)
+			{
+				carry = 0;
+				carry_f = 0;
+			}
+			else if (checked == 2)
+			{
+				carry = 1;
+				carry_f = 0;
+			}
+			else if (checked == 3)
+			{
+				carry = 0;
+				carry_f = 1;
+			}
+			else if (checked == 4)
+			{
+				carry = 1;
+				carry_f = 1;
+			}
+			for (n = 0; n < MAX_TEXT_NUM && counter != MAX_REPEAT_NUM; ++n)
+			{
+				// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
+				if (n == maxTexts)
+					generateText(round, position);
+				in = pair_crypt[4 * n + inInd];
+				out = pair_crypt[4 * n + outInd];
+				in_f = pair_fault[4 * n + inInd];
+				out_f = pair_fault[4 * n + outInd];
+				in1 = toSTBint(in);
+				out1 = toSTBint(out);
+				in_f1 = toSTBint(in_f);
+				out_f1 = toSTBint(out_f);
+
+				if (i != 0 && checked == 0)
+				{
+					carry = carryCount(in1, k_d, 8 * i);
+					carry_f = carryCount(in_f1, k_d, 8 * i);
+				}
+				in1 = ((in1 >> (8 * i)) + carry) & 0xFF;
+				in_f1 = ((in_f1 >> (8 * i)) + carry_f) & 0xFF;
+				for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
+				{
+					index = (rotLo(out1 ^ out_f1, shift) >> (8 * i)) & 0xFF;
+					index ^= sub_1[(in1 + k) & 0xFF]
+							^ sub_1[(in_f1 + k) & 0xFF];
+					g[k][index]++;
+				}
+				//INFO("=================================================================");
+				//printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
+				octet = countDk(g, dk, n + 1);
+				if (octet == ((roundKey >> (8 * (3 - i))) & 0xFF))
+					++counter;
+				else
+					counter = 0;
+			}
+			if (n < MAX_TEXT_NUM || counter == MAX_REPEAT_NUM)
+			{
+				fprintf(f, "\t%4d (%4d)", n, n - counter);
+				k_d ^= octet << (8 * i);
+				checked = 0;
+				break;
+			}
+			else if (checked == 0 || checked == 1)
+			{
+				fprintf(f, "\t%4d (%4d)", n, n);
+				checked = 4;
+				break;
+			}
+			--checked;
+		} while (checked != 0);
 	}
 	fprintf(f, "\n");
 }
@@ -466,7 +513,7 @@ void handDistinguisher()
 	INFO("key = ");
 	printf("0x%08X 0x%08X\n", key[6], key[7]);
 
-	key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 7, 0);
+	key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, 0);
 	key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 7, 0);
 	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 	//distinguishRoundKey_4(key[6], key[7], key[5], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
@@ -476,19 +523,26 @@ void handDistinguisher()
 
 void autoDistinguisher()
 {
-	uint32_t key_d[8];
+	clock_t c;
+	int pos = 0;
+	globalPos = 0;
 	FILE * f = fopen("results.txt", "w");
 	generateBytes(key, KEY_BYTE_LEN);
 
 	fprintf(f, "====================\n");
-	fprintf(f, "Distinguish key %d\n", 6);
+	fprintf(f, "Distinguish key %d %d\n", 6, 7);
 	fprintf(f, "====================\n");
-	fprintf(f, "\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
-	autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 7, 0, f);
+	fprintf(f, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
+	c = clock();
+	for (pos = 0; pos < 32; ++pos)
+	{
+		autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, pos, f);
+		autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 8, pos, f);
+	}
+	/*fprintf(f, "====================\n");
+	fprintf(f, "Distinguish key %d\n", 7);
 	fprintf(f, "====================\n");
-	fprintf(f, "Distinguish key %d\n", 6);
-	fprintf(f, "====================\n");
-	fprintf(f, "\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
-	//autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 7, 0, f);
+	fprintf(f, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);*/
 	fclose(f);
+	printf("%ld s\n", (clock() - c) / CLOCKS_PER_SEC);
 }
