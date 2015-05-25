@@ -526,39 +526,47 @@ void autoDistinguisher()
 	clock_t c;
 	int pos = 0;
 	int number;
-	char title[20];
-	char command[34];
+	char title_6[22];
+	char title_7[22];
+	char command_6[38];
+	char command_7[38];
 	globalPos = 0;
-	FILE * f = fopen("number.txt", "r");
-	fscanf(f, "%d", &number);
-	fclose(f);
+	FILE * f_6, *f_7;
+	f_6 = fopen("number.txt", "r");
+	fscanf(f_6, "%d", &number);
+	fclose(f_6);
 	++number;
-	f = fopen("number.txt", "w");
-	fprintf(f, "%d\n", number);
-	fclose(f);
+	f_6 = fopen("number.txt", "w");
+	fprintf(f_6, "%d\n", number);
+	fclose(f_6);
 
-	f = fopen("result.txt", "w");
+	f_6 = fopen("result_6.txt", "w");
+	f_7 = fopen("result_7.txt", "w");
 	generateBytes(key, KEY_BYTE_LEN);
 
-	fprintf(f, "====================\n");
-	fprintf(f, "Distinguish key %d %d\n", 6, 7);
-	fprintf(f, "====================\n");
-	fprintf(f, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
+	fprintf(f_6, "====================\n");
+	fprintf(f_6, "Distinguish key %d\n", 6);
+	fprintf(f_6, "====================\n");
+	fprintf(f_6, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
+	fprintf(f_7, "====================\n");
+	fprintf(f_7, "Distinguish key %d\n", 7);
+	fprintf(f_7, "====================\n");
+	fprintf(f_7, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
 	c = clock();
 	for (pos = 0; pos < 32; ++pos)
 	{
-		autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, pos, f);
-		autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 8, pos, f);
+		autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, pos, f_6);
+		autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 8, pos, f_7);
 	}
-	fprintf(f, "====================\n");
-	fprintf(f, "Distinguish key %d\n", 7);
-	fprintf(f, "====================\n");
-	fprintf(f, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
-	fclose(f);
-	//printf("%ld s\n", (clock() - c) / CLOCKS_PER_SEC);
-	sprintf(title, "result_%d_%ld.txt", number, (clock() - c) / CLOCKS_PER_SEC);
-	INFO("your result is in");
-	DEBUG(title);
-	sprintf(command, "mv result.txt %s", title);
-	system(command);
+	fclose(f_6);
+	fclose(f_7);
+	sprintf(title_6, "result_%d_%ld_6.txt", number, (clock() - c) / CLOCKS_PER_SEC);
+	sprintf(title_7, "result_%d_%ld_7.txt", number, (clock() - c) / CLOCKS_PER_SEC);
+	INFO("your results is in");
+	DEBUG(title_6);
+	DEBUG(title_7);
+	sprintf(command_6, "mv result_6.txt %s", title_6);
+	sprintf(command_7, "mv result_7.txt %s", title_7);
+	system(command_6);
+	system(command_7);
 }
