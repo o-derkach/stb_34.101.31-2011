@@ -525,8 +525,19 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int pos = 0;
+	int number;
+	char title[20];
+	char command[34];
 	globalPos = 0;
-	FILE * f = fopen("results.txt", "w");
+	FILE * f = fopen("number.txt", "r");
+	fscanf(f, "%d", &number);
+	fclose(f);
+	++number;
+	f = fopen("number.txt", "w");
+	fprintf(f, "%d\n", number);
+	fclose(f);
+
+	f = fopen("result.txt", "w");
 	generateBytes(key, KEY_BYTE_LEN);
 
 	fprintf(f, "====================\n");
@@ -539,10 +550,15 @@ void autoDistinguisher()
 		autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, pos, f);
 		autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 8, pos, f);
 	}
-	/*fprintf(f, "====================\n");
+	fprintf(f, "====================\n");
 	fprintf(f, "Distinguish key %d\n", 7);
 	fprintf(f, "====================\n");
-	fprintf(f, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);*/
+	fprintf(f, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
 	fclose(f);
-	printf("%ld s\n", (clock() - c) / CLOCKS_PER_SEC);
+	//printf("%ld s\n", (clock() - c) / CLOCKS_PER_SEC);
+	sprintf(title, "result_%d_%ld.txt", number, (clock() - c) / CLOCKS_PER_SEC);
+	INFO("your result is in");
+	DEBUG(title);
+	sprintf(command, "mv result.txt %s", title);
+	system(command);
 }
