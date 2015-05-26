@@ -6,6 +6,9 @@
 
 extern int plotting;
 extern const uint32_t sub_1[SBLOCK_VAL_COUNT];
+extern const uint32_t sub_2[SBLOCK_VAL_COUNT];
+extern const uint32_t sub_3[SBLOCK_VAL_COUNT];
+extern const uint32_t sub_4[SBLOCK_VAL_COUNT];
 
 uint32_t texts[MAX_TEXT_NUM * BLOCK_WORD_LEN];
 uint32_t pair_crypt[MAX_TEXT_NUM * BLOCK_WORD_LEN];
@@ -347,31 +350,41 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 	fprintf(f, "\n");
 }
 
-static int insideRoundKey_5(uint32_t j, uint32_t i, uint32_t * in, uint32_t * in_f, uint32_t * k_d, uint32_t check[4], uint32_t gamma[4])
+static int insideRoundKey_5(const uint32_t i, const uint32_t * in,
+		const uint32_t * in_f, uint32_t * k_d, const uint32_t check,
+		const uint32_t gamma, const int * shift, const uint32_t globalCarry)
 {
-	uint32_t in1, in_f1, cut, carry, carry_f;
-	uint32_t k, octet;
-	uint32_t a, b, index;
+	uint32_t in1, in_f1, cut_check, carry, carry_f;
+	uint32_t k;
+	uint32_t a, b, c, index;
 	int res;
+	carry = carry_f = 0;
 	if (i < ROUNDKEY_BIT_LEN / 8)
 	{
-		if (i != 0) {
+		if (i != 0)
+		{
 			carry = carryCount(*in, *k_d, 8 * i);
 			carry_f = carryCount(*in_f, *k_d, 8 * i);
 		}
 		in1 = ((*in >> (8 * i)) + carry) & 0xFF;
 		in_f1 = ((*in_f >> (8 * i)) + carry_f) & 0xFF;
-		octet = 0;
-		for (k = 0; k < SBLOCK_VAL_COUNT && octet == 0; ++k)
+
+		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 		{
+			c = 0;
 			a = sub_1[(in1 + k) & 0xFF];
 			b = sub_1[(in_f1 + k) & 0xFF];
-			index = (a - b) & 0xFF;
-			cut = (check[j] >> (8 * i)) & 0xFF;
-			if (index == cut)
+			if (a < b + globalCarry)
+				c = 1;
+			index = (a - b - globalCarry) & 0xFF;
+			cut_check = (check >> (8 * i)) & 0xFF;
+			if (index == cut_check)
 			{
 				(*k_d) ^= k << (8 * i);
-				res = insideRoundKey_5(j, i + 1, in, in_f, k_d, check, gamma);
+				printf("%02X\n", k);
+				printf("%08X\n", *k_d);
+				getchar();
+				res = insideRoundKey_5(i + 1, in, in_f, k_d, check, gamma, shift, c);
 				if (!res)
 					(*k_d) ^= k << (8 * i);
 				else
@@ -382,16 +395,35 @@ static int insideRoundKey_5(uint32_t j, uint32_t i, uint32_t * in, uint32_t * in
 	}
 	else
 	{
-		//check gamma
+		uint32_t g;
+		a = *in + *k_d;
+		b = *in_f + *k_d;
+		a = sub_1[a & 0xFF] ^ sub_2[(a >> 8) & 0xFF] ^ sub_3[(a >> 16) & 0xFF] ^ sub_4[(a >> 24) & 0xFF];
+		b = sub_1[b & 0xFF] ^ sub_2[(b >> 8) & 0xFF] ^ sub_3[(b >> 16) & 0xFF] ^ sub_4[(b >> 24) & 0xFF];
+		if (a < b)
+			c = 1;
+		else
+			c = 0;
+		g = c << *shift;
+		a = (a << *shift) >> *shift;
+		b = (b << *shift) >> *shift;
+		if (a < b)
+			c = 1;
+		else
+			c = 0;
+		g -= c;
+		if (gamma == g)
+			return 1;
+		else
+			return 0;
 	}
 }
 
 static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t roundKey_2, const int inInd,
 		const int outInd, const int shift_1, const int shift_2)
 {
-	uint32_t out, in, out_f, in_f, in1, in_f1, cut, carry, carry_f, i, j;
-	uint32_t k, k_d, octet;
-	uint32_t a, b, index;
+	uint32_t out, in, out_f, in_f, in1, in_f1, i, j;
+	uint32_t k_d;
 	uint32_t check[4];
 	uint32_t gamma[4];
 	char keyInfo[21];
@@ -399,7 +431,6 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 
 	sprintf(distKey, "key = 0x%08X", roundKey_2);
 	WARNING(distKey);
-	k = 0;
 	for (i = 0; i < maxTexts; ++i)
 	{
 		in = toSTBint(pair_crypt[4 * i + inInd]);
@@ -426,9 +457,7 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 			break;
 		}
 	}
-	k_d = 0;
 
-	carry = carry_f = 0;
 	gamma[0] = 0;
 	gamma[1] = 1 << shift_2;
 	gamma[2] = gamma[1] - 1;
@@ -436,35 +465,9 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 	printf("0x%08X 0x%08X\n", in, in_f);
 	for (j = 0; j < 4; ++j)
 	{
-		/*for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
-		{
-			if (i != 0)
-			{
-				carry = carryCount(in, k_d, 8 * i);
-				carry_f = carryCount(in_f, k_d, 8 * i);
-			}
-			in1 = ((in >> (8 * i)) + carry) & 0xFF;
-			in_f1 = ((in_f >> (8 * i)) + carry_f) & 0xFF;
-			octet = 0;
-			for (k = 0; k < SBLOCK_VAL_COUNT && octet == 0; ++k)
-			{
-				a = sub_1[(in1 + k) & 0xFF];
-				b = sub_1[(in_f1 + k) & 0xFF];
-				index = (a - b) & 0xFF;
-				//printf("%03X\n", index);
-				for (j = 0; j < 4; ++j) {
-					cut = (check[j] >> (8 * i)) & 0xFF;
-					if (index == cut) {
-						octet = k;
-						break;
-					}
-				}
-			}
-			printf("key = 0x%X\n", k);
-			k_d ^= k << (8 * i);
-
-		}*/
-		if (!insideRoundKey_5(j, 0, &in, &in_f, &k_d, check, gamma))
+		INFO("next j");
+		k_d = 0;
+		if (insideRoundKey_5(0, &in, &in_f, &k_d, check[j], gamma[j], &shift_2, 0))
 			break;
 	}
 	sprintf(keyInfo, "key xor = 0x%08X", roundKey_2 ^ toSTBint(k_d));
@@ -560,9 +563,9 @@ void handDistinguisher()
 	INFO("key = ");
 	printf("0x%08X 0x%08X\n", key[6], key[7]);
 
-	key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, 0);
-	key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 7, 0);
-	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+	//key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, 0);
+	key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, 8, 0);
+	key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 	//distinguishRoundKey_4(key[6], key[7], key[5], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
 	INFO("Total xor:")
 	printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);
