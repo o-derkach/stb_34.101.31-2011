@@ -347,6 +347,45 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 	fprintf(f, "\n");
 }
 
+static int insideRoundKey_5(uint32_t j, uint32_t i, uint32_t * in, uint32_t * in_f, uint32_t * k_d, uint32_t check[4], uint32_t gamma[4])
+{
+	uint32_t in1, in_f1, cut, carry, carry_f;
+	uint32_t k, octet;
+	uint32_t a, b, index;
+	int res;
+	if (i < ROUNDKEY_BIT_LEN / 8)
+	{
+		if (i != 0) {
+			carry = carryCount(*in, *k_d, 8 * i);
+			carry_f = carryCount(*in_f, *k_d, 8 * i);
+		}
+		in1 = ((*in >> (8 * i)) + carry) & 0xFF;
+		in_f1 = ((*in_f >> (8 * i)) + carry_f) & 0xFF;
+		octet = 0;
+		for (k = 0; k < SBLOCK_VAL_COUNT && octet == 0; ++k)
+		{
+			a = sub_1[(in1 + k) & 0xFF];
+			b = sub_1[(in_f1 + k) & 0xFF];
+			index = (a - b) & 0xFF;
+			cut = (check[j] >> (8 * i)) & 0xFF;
+			if (index == cut)
+			{
+				(*k_d) ^= k << (8 * i);
+				res = insideRoundKey_5(j, i + 1, in, in_f, k_d, check, gamma);
+				if (!res)
+					(*k_d) ^= k << (8 * i);
+				else
+					return res;
+			}
+		}
+		return 0;
+	}
+	else
+	{
+		//check gamma
+	}
+}
+
 static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t roundKey_2, const int inInd,
 		const int outInd, const int shift_1, const int shift_2)
 {
@@ -354,6 +393,7 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 	uint32_t k, k_d, octet;
 	uint32_t a, b, index;
 	uint32_t check[4];
+	uint32_t gamma[4];
 	char keyInfo[21];
 	char distKey[17];
 
@@ -385,43 +425,50 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 		{
 			break;
 		}
-		//sum = rotLo(sum, shift_2);
 	}
 	k_d = 0;
 
 	carry = carry_f = 0;
+	gamma[0] = 0;
+	gamma[1] = 1 << shift_2;
+	gamma[2] = gamma[1] - 1;
+	gamma[3] = -1;
 	printf("0x%08X 0x%08X\n", in, in_f);
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
+	for (j = 0; j < 4; ++j)
 	{
-		if (i != 0)
+		/*for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
 		{
-			carry = carryCount(in, k_d, 8 * i);
-			carry_f = carryCount(in_f, k_d, 8 * i);
-		}
-		in1 = ((in >> (8 * i)) + carry) & 0xFF;
-		in_f1 = ((in_f >> (8 * i)) + carry_f) & 0xFF;
-		octet = 0;
-		for (k = 0; k < SBLOCK_VAL_COUNT && octet == 0; ++k)
-		{
-			a = sub_1[(in1 + k) & 0xFF];
-			b = sub_1[(in_f1 + k) & 0xFF];
-			index = (a - b) & 0xFF;
-			//printf("%03X\n", index);
-			for (j = 0; j < 4; ++j)
+			if (i != 0)
 			{
-				cut = (check[j] >> (8 * i)) & 0xFF;
-				if (index == cut)
-				{
-					octet = k;
-					break;
+				carry = carryCount(in, k_d, 8 * i);
+				carry_f = carryCount(in_f, k_d, 8 * i);
+			}
+			in1 = ((in >> (8 * i)) + carry) & 0xFF;
+			in_f1 = ((in_f >> (8 * i)) + carry_f) & 0xFF;
+			octet = 0;
+			for (k = 0; k < SBLOCK_VAL_COUNT && octet == 0; ++k)
+			{
+				a = sub_1[(in1 + k) & 0xFF];
+				b = sub_1[(in_f1 + k) & 0xFF];
+				index = (a - b) & 0xFF;
+				//printf("%03X\n", index);
+				for (j = 0; j < 4; ++j) {
+					cut = (check[j] >> (8 * i)) & 0xFF;
+					if (index == cut) {
+						octet = k;
+						break;
+					}
 				}
 			}
-		}
-		printf("key = 0x%X\n", k);
-		k_d ^= k << (8 * i);
-		sprintf(keyInfo, "key xor = 0x%08X", roundKey_2 ^ toSTBint(k_d));
-		DEBUG(keyInfo);
+			printf("key = 0x%X\n", k);
+			k_d ^= k << (8 * i);
+
+		}*/
+		if (!insideRoundKey_5(j, 0, &in, &in_f, &k_d, check, gamma))
+			break;
 	}
+	sprintf(keyInfo, "key xor = 0x%08X", roundKey_2 ^ toSTBint(k_d));
+	DEBUG(keyInfo);
 	return k_d;
 }
 
