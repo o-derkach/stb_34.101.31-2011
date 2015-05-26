@@ -359,6 +359,7 @@ static int insideRoundKey_5(const uint32_t i, const uint32_t * in,
 	uint32_t a, b, c, index;
 	int res;
 	carry = carry_f = 0;
+	printf("check = %08X\n", check);
 	if (i < ROUNDKEY_BIT_LEN / 8)
 	{
 		if (i != 0)
@@ -368,12 +369,15 @@ static int insideRoundKey_5(const uint32_t i, const uint32_t * in,
 		}
 		in1 = ((*in >> (8 * i)) + carry) & 0xFF;
 		in_f1 = ((*in_f >> (8 * i)) + carry_f) & 0xFF;
+		printf("in:  0x%08X 0x%08X\n", *in, *in_f);
+		printf("in1: 0x%08X 0x%08X\n", in1, in_f1);
 
 		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 		{
 			c = 0;
 			a = sub_1[(in1 + k) & 0xFF];
 			b = sub_1[(in_f1 + k) & 0xFF];
+			//printf("a,b: 0x%08X 0x%08X %d\n", a, b, globalCarry);
 			if (a < b + globalCarry)
 				c = 1;
 			index = (a - b - globalCarry) & 0xFF;
@@ -381,8 +385,8 @@ static int insideRoundKey_5(const uint32_t i, const uint32_t * in,
 			if (index == cut_check)
 			{
 				(*k_d) ^= k << (8 * i);
-				printf("%02X\n", k);
-				printf("%08X\n", *k_d);
+				printf("k:   %02X\n", k);
+				printf("k_d: %08X\n", *k_d);
 				getchar();
 				res = insideRoundKey_5(i + 1, in, in_f, k_d, check, gamma, shift, c);
 				if (!res)
@@ -398,8 +402,10 @@ static int insideRoundKey_5(const uint32_t i, const uint32_t * in,
 		uint32_t g;
 		a = *in + *k_d;
 		b = *in_f + *k_d;
+		printf("0x%08X 0x%08x\n", a,b);
 		a = sub_1[a & 0xFF] ^ sub_2[(a >> 8) & 0xFF] ^ sub_3[(a >> 16) & 0xFF] ^ sub_4[(a >> 24) & 0xFF];
 		b = sub_1[b & 0xFF] ^ sub_2[(b >> 8) & 0xFF] ^ sub_3[(b >> 16) & 0xFF] ^ sub_4[(b >> 24) & 0xFF];
+		printf("0x%08X 0x%08x\n", a,b);
 		if (a < b)
 			c = 1;
 		else
@@ -407,11 +413,14 @@ static int insideRoundKey_5(const uint32_t i, const uint32_t * in,
 		g = c << *shift;
 		a = (a << *shift) >> *shift;
 		b = (b << *shift) >> *shift;
+		printf("0x%08X 0x%08x\n", a,b);
+		getchar();
 		if (a < b)
 			c = 1;
 		else
 			c = 0;
 		g -= c;
+		printf("gama, g: 0x%08X 0x%08X\n", gamma, g);
 		if (gamma == g)
 			return 1;
 		else
@@ -424,6 +433,7 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 {
 	uint32_t out, in, out_f, in_f, in1, in_f1, i, j;
 	uint32_t k_d;
+	uint32_t y, h1, h2;
 	uint32_t check[4];
 	uint32_t gamma[4];
 	char keyInfo[21];
@@ -438,8 +448,10 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 		in_f = toSTBint(pair_fault[4 * i + inInd]);
 		out_f = toSTBint(pair_fault[4 * i + outInd]);
 		check[3] = in;
+		y = in;
 		in = Gn(in + toSTBint(roundKey_1), shift_1) ^ out;
 		check[0] = check[1] = check[2] = check[3] -= in_f;
+		y -= in_f;
 		//printf("0x%08X 0x%08X 0x%08X 0x%08X\n", check[0], check[1], check[2], check[3]);
 		check[1] += 1 << shift_2;
 		check[2] = check[1] - 1;
@@ -457,7 +469,14 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 			break;
 		}
 	}
-
+	h1 = in + toSTBint(roundKey_2);
+	h2 = in_f + toSTBint(roundKey_2);
+	h1 = sub_1[h1 & 0xFF] ^ sub_2[(h1 >> 8) & 0xFF] ^ sub_3[(h1 >> 16) & 0xFF] ^ sub_4[(h1 >> 24) & 0xFF];
+	h2 = sub_1[h2 & 0xFF] ^ sub_2[(h2 >> 8) & 0xFF] ^ sub_3[(h2 >> 16) & 0xFF] ^ sub_4[(h2 >> 24) & 0xFF];
+	y = rotHi(h1 - h2, shift_2) - y;
+	printf("0x%08X\n", y);
+	//getchar();
+	//getchar();
 	gamma[0] = 0;
 	gamma[1] = 1 << shift_2;
 	gamma[2] = gamma[1] - 1;
