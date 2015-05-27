@@ -175,6 +175,8 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 		x = c1 + k[7 * i - 3];
 		x = Gn(x, BLOCK_SHIFT_13);
 		// x =
+		//if (i == 8)
+		//printf("c1 = %08X k = %08X\n", c1, k[7 * i - 3]);
 		d1 += x;
 		d = toSTBint(d1);
 		DUMP(a, b, c, d);
