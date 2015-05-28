@@ -122,7 +122,7 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 			{
 				d ^= 1 << (position & 0x1F);
 			}
-			//INFO("fault injected");
+			INFO("fault injected");
 			//roundDump(a, b, c, d);
 		}
 		a1 = toSTBint(a);
@@ -154,6 +154,8 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 		DUMP(a, b, c, d);
 
 		//4 step
+		if (i == 8)
+		printf("sum = 0x%08x\n", b1 + c1);
 		x = b1 + c1 + k[7 * i - 4];
 		x = Gn(x, BLOCK_SHIFT_21);
 		//x =
@@ -171,6 +173,8 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 		c = toSTBint(c1);
 		DUMP(a, b, c, d);
 
+		if (i == 8)
+				printf("sum = 0x%08x\n", b1 + c1);
 		//7 step
 		x = c1 + k[7 * i - 3];
 		x = Gn(x, BLOCK_SHIFT_13);

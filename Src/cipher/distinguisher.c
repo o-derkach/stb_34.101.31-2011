@@ -501,14 +501,19 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 	char keyInfo[21];
 	char distKey[17];
 
+
+	k_d = 0;
+	carry = carry_f = 0;
+	xor = rotLo(8, shift_3);
+
+	if (exitCode != 0)
+		switchPlotting();
 	sprintf(distKey, "key = 0x%08X", roundKey_3);
 	WARNING(distKey);
 
-	xor = rotLo(8, shift_3);
-	k_d = 0;
 	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
 	{
-		exitCode = 2;
+		exitCode = 1;
 		// initialize g with 0
 		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 		{
@@ -528,6 +533,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			out_f = toSTBint(pair_fault[4 * n]);
 			outSum = sum = Gn(in + toSTBint(roundKey_1), shift_1) ^ out;
 			sum_f = Gn(in_f + toSTBint(roundKey_1), shift_1) ^ out_f;
+			//printf("0x%08X 0x%08X\n", sum, sum_f);
 			outSum += sum_f;
 			outSum = rotLo(outSum, shift_3);
 
@@ -537,7 +543,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			out_f = toSTBint(pair_fault[4 * n + 3]);
 			sum += Gn(in + toSTBint(roundKey_2), shift_2) ^ out;
 			sum_f += Gn(in_f + toSTBint(roundKey_2), shift_2) ^ out_f;
-
+			printf("0x%08X 0x%08X\n", sum, sum_f);
 			if (i != 0)
 			{
 				carry = carryCount(sum, k_d, 8 * i);
@@ -576,7 +582,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			{
 				if ((n + 1) % 100 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 1000 == 0)
@@ -586,7 +592,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			{
 				if ((n + 1) % 1000 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 10000 == 0)
@@ -600,49 +606,10 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 		}
 		system("./kill_gnu.sh");
 		k_d ^= octet << (8 * i);
-		sprintf(keyInfo, "key xor = 0x%08X", roundKey ^ toSTBint(k_d));
+		sprintf(keyInfo, "key xor = 0x%08X", roundKey_3 ^ toSTBint(k_d));
 		DEBUG(keyInfo);
 	}
 	return toSTBint(k_d);
-	/*
-	k_d = 0;
-	carry = carry_f = 0;
-	printf("0x%08X 0x%08X\n", sum, sum_f);
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8; ++i)
-	{
-		if (i != 0)
-		{
-			carry = carryCount(sum, k_d, 8 * i);
-			carry_f = carryCount(sum_f, k_d, 8 * i);
-		}
-		in1 = ((sum >> (8 * i)) + carry) & 0xFF;
-		in_f1 = ((sum_f >> (8 * i)) + carry_f) & 0xFF;
-		printf("0x%08X 0x%08X\n", in1, in_f1);
-		octet = 0;
-		for (k = 0; k < SBLOCK_VAL_COUNT && octet == 0; ++k)
-		{
-			a = sub_1[(in1 + k) & 0xFF];
-			b = sub_1[(in_f1 + k) & 0xFF];
-			index = (b - a) & 0xFF;
-			printf("index =%08X\n", index);
-			printf("0x%08X 0x%08X 0x%08X 0x%08X\n", check[0], check[1], check[2], check[3]);
-			for (j = 0; j < 4; ++j)
-			{
-				cut = (check[j] >> (8 * i)) & 0xFF;
-				if (index == cut)
-				{
-					printf("key = 0x%02X\n", k);
-					//octet = k;
-					//break;
-				}
-			}
-			getchar();
-		}
-		printf("key = 0x%02X\n", octet);
-		k_d ^= octet << (8 * i);
-		sprintf(keyInfo, "key xor = 0x%08X", roundKey_3 ^ toSTBint(k_d));
-		DEBUG(keyInfo);
-	}*/
 }
 
 void handDistinguisher()
@@ -652,12 +619,12 @@ void handDistinguisher()
 	_round = 8;
 	position = 0;
 	INFO("key = ");
-	printf("0x%08X 0x%08X\n", key[6], key[7]);
+	printf("0x%08X 0x%08X 0x%08X\n", key[6], key[7], key[4]);
 
 	//key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, 0);
 	//key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5);
-	key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
-	//distinguishRoundKey_4(key[6], key[7], key[5], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
+	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+	distinguishRoundKey_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
 	/*INFO("Total xor:")
 	printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);*/
 	INFO("Total stat:");

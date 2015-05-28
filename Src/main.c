@@ -4,7 +4,7 @@
 int main()
 {
 	srand(time(NULL));
-	//handDistinguisher();
-	autoDistinguisher();
+	handDistinguisher();
+	//autoDistinguisher();
 	return 0;
 }
