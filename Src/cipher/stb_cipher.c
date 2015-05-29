@@ -223,6 +223,146 @@ void cryptWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, cons
 	out[3] = c;
 }
 
+// if round = 0 - no fault
+void cryptTwoRoundsWithFault(const uint32_t *in, const uint32_t *key, uint32_t *out, const int round, const int position)
+{
+	uint32_t a, b, c, d, a1, b1, c1, d1, e, x, i;
+	uint32_t k[ROUNDKEY_NUM];
+	for (i = 0; i < ROUNDKEY_NUM; ++i)
+	{
+		k[i] = toSTBint(key[i & (KEY_WORD_LEN - 1)]);
+	}
+	a = in[0];
+	b = in[1];
+	c = in[2];
+	d = in[3];
+	//roundDump(a, b, c, d);
+
+	DUMP(a, b, c, d);
+
+	i = 1;
+	for (i = 7; i <= ROUND_NUM; ++i)
+	{
+		if (i == round)
+		{
+			//roundDump(a, b, c, d);
+			if (position < 32)
+			{
+				a ^= 1 << position;
+			}
+			else if (position < 64)
+			{
+				b ^= 1 << (position & 0x1F);
+			}
+			else if (position < 96)
+			{
+				c ^= 1 << (position & 0x1F);
+			}
+			else if (position < 128)
+			{
+				d ^= 1 << (position & 0x1F);
+			}
+			//INFO("fault injected");
+			//roundDump(a, b, c, d);
+		}
+		a1 = toSTBint(a);
+		b1 = toSTBint(b);
+		c1 = toSTBint(c);
+		d1 = toSTBint(d);
+		//1 step
+		x = a1 + k[7 * i - 7];
+		x = Gn(x, BLOCK_SHIFT_5);
+		//x = toSTBint(x); if uncomment this you MUST XOR with b in next line
+		b1 ^= x;
+		b = toSTBint(b1);
+		DUMP(a, b, c, d);
+
+		//2 step
+		x = d1 + k[7 * i - 6];
+		x = Gn(x, BLOCK_SHIFT_21);
+		//x =
+		c1 ^= x;
+		c = toSTBint(c1);
+		DUMP(a, b, c, d);
+
+		//3 step
+		x = b1 + k[7 * i - 5];
+		x = Gn(x, BLOCK_SHIFT_13);
+		//x =
+		a1 -= x;
+		a = toSTBint(a1);
+		DUMP(a, b, c, d);
+
+		//4 step
+		//if (i == 8)
+		//printf("sum = 0x%08x\n", b1 + c1);
+		x = b1 + c1 + k[7 * i - 4];
+		x = Gn(x, BLOCK_SHIFT_21);
+		//x =
+		e = x ^ i;
+		DUMP(a, b, c, d);
+		//printf("e = 0x%8x\n", toSTBint(e));
+
+		//5 step
+		b1 = b1 + e;
+		b = toSTBint(b1);
+		DUMP(a, b, c, d);
+
+		//6 step
+		c1 = c1 - e;
+		c = toSTBint(c1);
+		DUMP(a, b, c, d);
+
+		//if (i == 8)
+		//		printf("sum = 0x%08x\n", b1 + c1);
+		//7 step
+		x = c1 + k[7 * i - 3];
+		x = Gn(x, BLOCK_SHIFT_13);
+		// x =
+		//if (i == 8)
+		//printf("c1 = %08X k = %08X\n", c1, k[7 * i - 3]);
+		d1 += x;
+		d = toSTBint(d1);
+		DUMP(a, b, c, d);
+
+		//8 step
+		x = a1 + k[7 * i - 2];
+		x = Gn(x, BLOCK_SHIFT_21);
+		// x =
+		b1 ^= x;
+		b = toSTBint(b1);
+		DUMP(a, b, c, d);
+
+		//9 step
+		x = d1 + k[7 * i - 1];
+		x = Gn(x, BLOCK_SHIFT_5);
+		// x =
+		c1 ^= x;
+		c = toSTBint(c1);
+		DUMP(a, b, c, d);
+
+		//roundDump(a, b, c, d);
+		//INFO("FINAL PERMUTATION");
+		//10-12 step
+		x = a;
+		a = b;
+		b = x;
+		DUMP(a, b, c, d);
+		x = c;
+		c = d;
+		d = x;
+		DUMP(a, b, c, d);
+		x = b;
+		b = c;
+		c = x;
+		//roundDump(a, b, c, d);
+	}
+	out[0] = b;
+	out[1] = d;
+	out[2] = a;
+	out[3] = c;
+}
+
 void crypt_yasv(const uint32_t *in, const uint32_t *key, uint32_t *out)
 {
 	uint32_t a, b, c, d, e, x, i;

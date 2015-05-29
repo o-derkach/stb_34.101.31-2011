@@ -5,5 +5,6 @@
 
 void handDistinguisher();
 void autoDistinguisher();
+void autoDistinguisher_5();
 
 #endif /* DISTINGUISHER_H_ */

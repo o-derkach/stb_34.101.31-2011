@@ -24,6 +24,8 @@ static int _round;
 static int countKeys = 0;
 static int keyFlag = 0;
 
+//static double
+
 void printTexts(uint32_t * texts)
 {
 	int i, j;
@@ -46,7 +48,8 @@ void plotData(const double arr[], const uint32_t size, const uint32_t name)
 
 		char title[17];
 		char * const_title = "set title";
-		char * commandsForGnuplot[] = {"set boxwidth 1", "set xrange [-1:257] ", "plot 'data.temp' with boxes"};
+		char * commandsForGnuplot[] = { "set boxwidth 1",
+				"set xrange [-1:257] ", "plot 'data.temp' with boxes" };
 		uint32_t i;
 
 		for (i = 0; i < size; ++i)
@@ -65,7 +68,8 @@ void plotData(const double arr[], const uint32_t size, const uint32_t name)
 	}
 }
 
-static uint32_t countDk(double gi[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT], double *dk, const uint32_t n)
+static uint32_t countDk(double gi[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT],
+		double *dk, const uint32_t n)
 {
 	uint32_t x, k, max = 0;
 	const double mean_t = 1 / (double) SBLOCK_VAL_COUNT;
@@ -85,12 +89,12 @@ static uint32_t countDk(double gi[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT], double *d
 			max = k;
 	}
 	/*mean /= SBLOCK_VAL_COUNT;
-	printf("mean = %f\n", mean);
-	s -= mean * mean;
-	printf("var = %f\n", s);
-	printf("sigma = %f\n", sqrt(s));
-	printf("3 sigma = %f\n", 3 * sqrt(s));
-	printf("3 roof = %f\n", mean + 3 * sqrt(s));*/
+	 printf("mean = %f\n", mean);
+	 s -= mean * mean;
+	 printf("var = %f\n", s);
+	 printf("sigma = %f\n", sqrt(s));
+	 printf("3 sigma = %f\n", 3 * sqrt(s));
+	 printf("3 roof = %f\n", mean + 3 * sqrt(s));*/
 	return max;
 }
 
@@ -104,7 +108,8 @@ static void antiFinalPerm(uint32_t * out)
 	out[3] = x;
 }
 
-static uint32_t carryCount(const uint32_t a, const uint32_t k, const uint32_t shift)
+static uint32_t carryCount(const uint32_t a, const uint32_t k,
+		const uint32_t shift)
 {
 	uint32_t tuda = 32 - shift;
 	uint32_t suda = tuda;
@@ -113,8 +118,10 @@ static uint32_t carryCount(const uint32_t a, const uint32_t k, const uint32_t sh
 
 static void waitInput()
 {
-	do {
-		INFO("=================================================================");
+	do
+	{
+		INFO(
+				"=================================================================");
 		printf("0 - exit;\n");
 		printf("1 - next 10 text;\n");
 		printf("2 - next 100 texts;\n");
@@ -125,7 +132,8 @@ static void waitInput()
 		scanf("%d", &exitCode);
 		if (exitCode == 5)
 			system("./kill_gnu.sh");
-		INFO("=================================================================");
+		INFO(
+				"=================================================================");
 	} while (exitCode == 5);
 }
 
@@ -140,8 +148,19 @@ void generateText()
 	++maxTexts;
 }
 
-static uint32_t distinguishRoundKey_67(const uint32_t roundKey,
-		const int inInd, const int outInd, const int shift)
+void generateCutRoundsText()
+{
+	int n = 4 * maxTexts;
+	generateBytes(texts + n, BLOCK_BYTE_LEN);
+	cryptTwoRoundsWithFault(texts + n, key, pair_crypt + n, 0, 0);
+	cryptTwoRoundsWithFault(texts + n, key, pair_fault + n, _round, position);
+	antiFinalPerm(pair_crypt + n);
+	antiFinalPerm(pair_fault + n);
+	++maxTexts;
+}
+
+static uint32_t distinguishRoundKey_67(const uint32_t roundKey, const int inInd,
+		const int outInd, const int shift)
 {
 	int n;
 	uint32_t out, in, out1, in1, out_f, in_f, out_f1, in_f1, carry, carry_f, i;
@@ -199,16 +218,18 @@ static uint32_t distinguishRoundKey_67(const uint32_t roundKey,
 			octet = countDk(g, dk, n + 1);
 			if (exitCode == 1)
 			{
-				printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
+				printf("0x%02X\t0x%02X (%d texts)\n", octet,
+						(roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
 				plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				//if ((n + 1) % 10 == 0)
-					waitInput();
+				waitInput();
 			}
 			else if (exitCode == 2)
 			{
 				if ((n + 1) % 10 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet,
+							(roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 100 == 0)
@@ -218,7 +239,8 @@ static uint32_t distinguishRoundKey_67(const uint32_t roundKey,
 			{
 				if ((n + 1) % 100 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet,
+							(roundKey >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 1000 == 0)
@@ -249,11 +271,11 @@ static uint32_t distinguishRoundKey_67(const uint32_t roundKey,
 	return toSTBint(k_d);
 }
 
-static void autoDistinguishRoundKey_67(const uint32_t roundKey,
-		const int inInd, const int outInd, const int shift, FILE *f)
+static void autoDistinguishRoundKey_67(const uint32_t roundKey, const int inInd,
+		const int outInd, const int shift, FILE *f)
 {
 	int n, counter, checked;
-	uint32_t out, in, out1, in1, out_f, in_f, out_f1, in_f1, carry, carry_f, i;
+	uint32_t out, in, out_f, in_f, carry, carry_f, i;
 	uint32_t k, k_d, index, octet;
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
 	double dk[SBLOCK_VAL_COUNT];
@@ -272,13 +294,14 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 		do
 		{
 			counter = 0;
-			for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-			{
-				for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
-				{
-					g[k][n] = 0;
-				}
-			}
+			/*for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
+			 {
+			 for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
+			 {
+			 g[k][n] = 0;
+			 }
+			 }*/
+			memset(g, 0, SBLOCK_VAL_COUNT * SBLOCK_VAL_COUNT * sizeof(double));
 			if (checked == 1)
 			{
 				carry = 0;
@@ -303,28 +326,24 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 			{
 				// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
 				if (n == maxTexts)
-					generateText();
-				in = pair_crypt[4 * n + inInd];
-				out = pair_crypt[4 * n + outInd];
-				in_f = pair_fault[4 * n + inInd];
-				out_f = pair_fault[4 * n + outInd];
-				in1 = toSTBint(in);
-				out1 = toSTBint(out);
-				in_f1 = toSTBint(in_f);
-				out_f1 = toSTBint(out_f);
+					generateCutRoundsText();
+				//generateText();
+				in = toSTBint(pair_crypt[4 * n + inInd]);
+				out = toSTBint(pair_crypt[4 * n + outInd]);
+				in_f = toSTBint(pair_fault[4 * n + inInd]);
+				out_f = toSTBint(pair_fault[4 * n + outInd]);
 
 				if (i != 0 && checked == 0)
 				{
-					carry = carryCount(in1, k_d, 8 * i);
-					carry_f = carryCount(in_f1, k_d, 8 * i);
+					carry = carryCount(in, k_d, 8 * i);
+					carry_f = carryCount(in_f, k_d, 8 * i);
 				}
-				in1 = ((in1 >> (8 * i)) + carry) & 0xFF;
-				in_f1 = ((in_f1 >> (8 * i)) + carry_f) & 0xFF;
+				in = ((in >> (8 * i)) + carry) & 0xFF;
+				in_f = ((in_f >> (8 * i)) + carry_f) & 0xFF;
 				for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 				{
-					index = (rotLo(out1 ^ out_f1, shift) >> (8 * i)) & 0xFF;
-					index ^= sub_1[(in1 + k) & 0xFF]
-							^ sub_1[(in_f1 + k) & 0xFF];
+					index = (rotLo(out ^ out_f, shift) >> (8 * i)) & 0xFF;
+					index ^= sub_1[(in + k) & 0xFF] ^ sub_1[(in_f + k) & 0xFF];
 					g[k][index]++;
 				}
 				//INFO("=================================================================");
@@ -359,7 +378,8 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey,
 
 static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 		const uint32_t * in_f, uint32_t * k_d, const uint32_t check,
-		const uint32_t gamma, const int * shift, const uint32_t globalCarry, const uint32_t * xor)
+		const uint32_t gamma, const int * shift, const uint32_t globalCarry,
+		const uint32_t * xor, const uint32_t * checkKey)
 {
 	uint32_t in1, in_f1, cut_check, carry, carry_f;
 	uint32_t k;
@@ -386,8 +406,10 @@ static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 			cut_check = (check >> (8 * i)) & 0xFF;
 			if (index == cut_check)
 			{
+				//printf("k = 0x%02X\n", k);
 				(*k_d) ^= k << (8 * i);
-				insideRoundKey_5(i + 1, in, in_f, k_d, check, gamma, shift, c, xor);
+				insideRoundKey_5(i + 1, in, in_f, k_d, check, gamma, shift, c,
+						xor, checkKey);
 				(*k_d) ^= k << (8 * i);
 			}
 		}
@@ -397,8 +419,10 @@ static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 		uint32_t g;
 		a = *in + *k_d;
 		b = *in_f + *k_d;
-		a = sub_1[a & 0xFF] ^ sub_2[(a >> 8) & 0xFF] ^ sub_3[(a >> 16) & 0xFF] ^ sub_4[(a >> 24) & 0xFF];
-		b = sub_1[b & 0xFF] ^ sub_2[(b >> 8) & 0xFF] ^ sub_3[(b >> 16) & 0xFF] ^ sub_4[(b >> 24) & 0xFF];
+		a = sub_1[a & 0xFF] ^ sub_2[(a >> 8) & 0xFF] ^ sub_3[(a >> 16) & 0xFF]
+				^ sub_4[(a >> 24) & 0xFF];
+		b = sub_1[b & 0xFF] ^ sub_2[(b >> 8) & 0xFF] ^ sub_3[(b >> 16) & 0xFF]
+				^ sub_4[(b >> 24) & 0xFF];
 		a ^= *xor;
 		b ^= *xor;
 		if (a < b)
@@ -417,8 +441,8 @@ static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 		{
 			++countKeys;
 			//INFO("=========================================================");
-			//printf("key xor = 0x%08X\n", *k_d ^ toSTBint(key[5]));
-			if ((*k_d ^ toSTBint(key[5])) == 0)
+			//printf("key xor = 0x%08X\n", *k_d ^ toSTBint(key[4]));
+			if ((*k_d ^ toSTBint(*checkKey)) == 0)
 			{
 				++keyFlag;
 				//ERROR("!!!");
@@ -428,8 +452,9 @@ static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 	}
 }
 
-static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t roundKey_2, const int inInd,
-		const int outInd, const int shift_1, const int shift_2)
+static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
+		const uint32_t roundKey_2, const int inInd, const int outInd,
+		const int shift_1, const int shift_2)
 {
 	int n;
 	uint32_t out, in, out_f, in_f, xor, j;
@@ -437,11 +462,15 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 	//uint32_t y, h1, h2;
 	uint32_t check[4];
 	uint32_t gamma[4];
-	char keyInfo[21];
 	char distKey[17];
 
 	sprintf(distKey, "key = 0x%08X", roundKey_2);
 	WARNING(distKey);
+	if (position != prevPos)
+	{
+		maxTexts = 0;
+		prevPos = position;
+	}
 	for (n = 0; n < MAX_TEXT_NUM; ++n)
 	{
 		if (n == maxTexts)
@@ -464,17 +493,18 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 		check[3] = rotLo(check[3], shift_2);
 		in_f = Gn(in_f + toSTBint(roundKey_1), shift_1) ^ out_f;
 		xor = in ^ in_f;
-		if ((xor & 0xFF) && ((xor >> 8) & 0xFF) && ((xor >> 16) & 0xFF) && ((xor >> 24) & 0xFF))
+		if ((xor & 0xFF) && ((xor >> 8) & 0xFF) && ((xor >> 16) & 0xFF)
+				&& ((xor >> 24) & 0xFF))
 		{
 			break;
 		}
 	}
 	/*h1 = in + toSTBint(roundKey_2);
-	h2 = in_f + toSTBint(roundKey_2);
-	h1 = sub_1[h1 & 0xFF] ^ sub_2[(h1 >> 8) & 0xFF] ^ sub_3[(h1 >> 16) & 0xFF] ^ sub_4[(h1 >> 24) & 0xFF];
-	h2 = sub_1[h2 & 0xFF] ^ sub_2[(h2 >> 8) & 0xFF] ^ sub_3[(h2 >> 16) & 0xFF] ^ sub_4[(h2 >> 24) & 0xFF];
-	y = rotHi(h1 - h2, shift_2) - y;
-	printf("0x%08X\n", y);*/
+	 h2 = in_f + toSTBint(roundKey_2);
+	 h1 = sub_1[h1 & 0xFF] ^ sub_2[(h1 >> 8) & 0xFF] ^ sub_3[(h1 >> 16) & 0xFF] ^ sub_4[(h1 >> 24) & 0xFF];
+	 h2 = sub_1[h2 & 0xFF] ^ sub_2[(h2 >> 8) & 0xFF] ^ sub_3[(h2 >> 16) & 0xFF] ^ sub_4[(h2 >> 24) & 0xFF];
+	 y = rotHi(h1 - h2, shift_2) - y;
+	 printf("0x%08X\n", y);*/
 	xor = 0;
 	gamma[0] = 0;
 	gamma[1] = 1 << shift_2;
@@ -484,7 +514,8 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1, const uint32_t 
 	for (j = 0; j < 4; ++j)
 	{
 		k_d = 0;
-		insideRoundKey_5(0, &in, &in_f, &k_d, check[j], gamma[j], &shift_2, 0, &xor);
+		insideRoundKey_5(0, &in, &in_f, &k_d, check[j], gamma[j], &shift_2, 0,
+				&xor, &key[5]);
 		//printf("key = 0x%08X\n", k_d);
 		//sprintf(keyInfo, "key xor = 0x%08X", toSTBint(roundKey_2) ^ k_d);
 		//DEBUG(keyInfo);
@@ -497,16 +528,14 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 		const int shift_2, const int shift_3)
 {
 	int n;
-	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, cut, carry, carry_f, i, j;
+	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, i;
 	uint32_t k, k_d, octet;
-	uint8_t a, b, index;
+	uint8_t index;
 	uint32_t xor;
-	uint32_t check[4];
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
 	double dk[SBLOCK_VAL_COUNT];
 	char keyInfo[21];
 	char distKey[17];
-
 
 	k_d = 0;
 	carry = carry_f = 0;
@@ -519,7 +548,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 
 	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
 	{
-		exitCode = 1;
+		exitCode = 2;
 		// initialize g with 0
 		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 		{
@@ -549,7 +578,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			out_f = toSTBint(pair_fault[4 * n + 3]);
 			sum += Gn(in + toSTBint(roundKey_2), shift_2) ^ out;
 			sum_f += Gn(in_f + toSTBint(roundKey_2), shift_2) ^ out_f;
-			printf("0x%08X 0x%08X\n", sum, sum_f);
+			//printf("0x%08X 0x%08X\n", sum, sum_f);
 			if (i != 0)
 			{
 				carry = carryCount(sum, k_d, 8 * i);
@@ -569,7 +598,8 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			octet = countDk(g, dk, n + 1);
 			if (exitCode == 1)
 			{
-				printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
+				printf("0x%02X\t0x%02X (%d texts)\n", octet,
+						(roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
 				plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				//if ((n + 1) % 10 == 0)
 				waitInput();
@@ -578,7 +608,8 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			{
 				if ((n + 1) % 10 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet,
+							(roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 100 == 0)
@@ -588,7 +619,8 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			{
 				if ((n + 1) % 100 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet,
+							(roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 1000 == 0)
@@ -598,7 +630,8 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 			{
 				if ((n + 1) % 1000 == 0)
 				{
-					printf("0x%02X\t0x%02X (%d texts)\n", octet, (roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
+					printf("0x%02X\t0x%02X (%d texts)\n", octet,
+							(roundKey_3 >> (8 * (3 - i))) & 0xFF, n + 1);
 					plotData(dk, SBLOCK_VAL_COUNT, n + 1);
 				}
 				if ((n + 1) % 10000 == 0)
@@ -627,10 +660,9 @@ static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 	uint32_t k_d;
 	uint32_t check[4];
 	uint32_t gamma[4];
-	char keyInfo[21];
 	char distKey[17];
 
-	sprintf(distKey, "key = 0x%08X", roundKey_2);
+	sprintf(distKey, "key = 0x%08X", roundKey_3);
 	WARNING(distKey);
 
 	for (n = 0; n < MAX_TEXT_NUM; ++n)
@@ -663,8 +695,10 @@ static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 		sum += in;
 		sum_f += in_f;
 		xor = sum ^ sum_f;
+		//printf("0x%08X 0x%08X 0x%08X\n", sum, sum_f, xor);
 		if ((xor & 0xFF) && ((xor >> 8) & 0xFF) && ((xor >> 16) & 0xFF)
 				&& ((xor >> 24) & 0xFF))
+		//if (1)
 		{
 			break;
 		}
@@ -675,11 +709,13 @@ static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 	gamma[1] = 1 << shift_3;
 	gamma[2] = gamma[1] - 1;
 	gamma[3] = -1;
+	printf("%d\n", maxTexts);
 	printf("0x%08X 0x%08X\n", sum, sum_f);
 	for (j = 0; j < 4; ++j)
 	{
 		k_d = 0;
-		insideRoundKey_5(0, &sum, &sum_f, &k_d, check[j], gamma[j], &shift_3, 0, &xor);
+		insideRoundKey_5(0, &sum_f, &sum, &k_d, check[j], gamma[j], &shift_3, 0,
+				&xor, &key[4]);
 	}
 	return k_d;
 }
@@ -688,7 +724,7 @@ void handDistinguisher()
 {
 	uint32_t key_d[8];
 	generateBytes(key, KEY_BYTE_LEN);
-	_round = 8;
+	_round = 7;
 	position = 0;
 	INFO("key = ");
 	printf("0x%08X 0x%08X 0x%08X\n", key[6], key[7], key[4]);
@@ -696,11 +732,41 @@ void handDistinguisher()
 	//key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, 0);
 	//key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5);
 	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
-	distinguishRoundKey_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
+	distinguishRoundKey_4_2(key[6], key[7], key[4], BLOCK_SHIFT_21,
+			BLOCK_SHIFT_5, BLOCK_SHIFT_21);
 	/*INFO("Total xor:")
-	printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);*/
+	 printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);*/
 	INFO("Total stat:");
-	printf("\ttotal keys  = %d\n\tresult key  = %d\n\ttotal texts = %d\n", countKeys, keyFlag, maxTexts);
+	printf("\ttotal keys  = %d\n\tresult key  = %d\n\ttotal texts = %d\n",
+			countKeys, keyFlag, maxTexts);
+}
+
+void autoDistinguisher_5()
+{
+	clock_t c;
+	FILE *f;
+	uint32_t key_d[8];
+	generateBytes(key, KEY_BYTE_LEN);
+	_round = 8;
+	prevPos = 0;
+	f = fopen("result_key_5.txt", "w");
+	fprintf(f, "pos\tKeysnumber(texts number)%\n");
+	_round = 8;
+	c = clock();
+	for (position = 0; position < 64; ++position)
+	{
+		distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5,
+				BLOCK_SHIFT_13);
+		if (keyFlag == 1)
+			fprintf(f, "%3d\t%10d(%11d)\n", position, countKeys, maxTexts);
+		else
+			fprintf(f, "%3d\t%10d(%11d)\n", position, -1, maxTexts);
+		fflush(f);
+		countKeys = 0;
+		keyFlag = 0;
+	}
+	fprintf(f, "time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);
+	fclose(f);
 }
 
 void autoDistinguisher()
@@ -735,15 +801,17 @@ void autoDistinguisher()
 	fprintf(f_7, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
 	_round = 8;
 	c = clock();
-	for (position = 32; position < 64; ++position)
+	for (position = 64; position < 96; ++position)
 	{
 		autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, f_6);
 		autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, f_7);
 	}
 	fclose(f_6);
 	fclose(f_7);
-	sprintf(title_6, "result_%d_%ld_6.txt", number, (clock() - c) / CLOCKS_PER_SEC);
-	sprintf(title_7, "result_%d_%ld_7.txt", number, (clock() - c) / CLOCKS_PER_SEC);
+	sprintf(title_6, "result_%d_%ld_6.txt", number,
+			(clock() - c) / CLOCKS_PER_SEC);
+	sprintf(title_7, "result_%d_%ld_7.txt", number,
+			(clock() - c) / CLOCKS_PER_SEC);
 	INFO("your results is in");
 	DEBUG(title_6);
 	DEBUG(title_7);
