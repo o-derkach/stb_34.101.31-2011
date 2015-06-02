@@ -3,6 +3,7 @@
 #include "config.h"
 #include "distinguisher.h"
 #include <math.h>
+#include <limits.h>
 
 extern int plotting;
 extern const uint32_t sub_1[SBLOCK_VAL_COUNT];
@@ -294,13 +295,6 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey, const int inInd,
 		do
 		{
 			counter = 0;
-			/*for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-			 {
-			 for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
-			 {
-			 g[k][n] = 0;
-			 }
-			 }*/
 			memset(g, 0, SBLOCK_VAL_COUNT * SBLOCK_VAL_COUNT * sizeof(double));
 			if (checked == 1)
 			{
@@ -464,8 +458,8 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
 	uint32_t gamma[4];
 	char distKey[17];
 
-	sprintf(distKey, "key = 0x%08X", roundKey_2);
-	WARNING(distKey);
+	//sprintf(distKey, "key = 0x%08X", roundKey_2);
+	//WARNING(distKey);
 	if (position != prevPos)
 	{
 		maxTexts = 0;
@@ -510,7 +504,7 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
 	gamma[1] = 1 << shift_2;
 	gamma[2] = gamma[1] - 1;
 	gamma[3] = -1;
-	printf("0x%08X 0x%08X\n", in, in_f);
+	//printf("0x%08X 0x%08X\n", in, in_f);
 	for (j = 0; j < 4; ++j)
 	{
 		k_d = 0;
@@ -550,18 +544,13 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 	{
 		exitCode = 2;
 		// initialize g with 0
-		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
-		{
-			for (n = 0; n < SBLOCK_VAL_COUNT; ++n)
-			{
-				g[k][n] = 0;
-			}
-		}
+		memset(g, 0, SBLOCK_VAL_COUNT * SBLOCK_VAL_COUNT * sizeof(double));
 		for (n = 0; n < MAX_TEXT_NUM && exitCode != 4 && exitCode != 0; ++n)
 		{
 			// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
 			if (n == maxTexts)
-				generateText();
+				//generateText();
+				generateCutRoundsText();
 			in = toSTBint(pair_crypt[4 * n + 2]);
 			out = toSTBint(pair_crypt[4 * n]);
 			in_f = toSTBint(pair_fault[4 * n + 2]);
@@ -758,9 +747,9 @@ void autoDistinguisher_5()
 		distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5,
 				BLOCK_SHIFT_13);
 		if (keyFlag == 1)
-			fprintf(f, "%3d\t%10d(%11d)\n", position, countKeys, maxTexts);
+			fprintf(f, "%3d\t%10d(%6d)\n", position, countKeys, maxTexts);
 		else
-			fprintf(f, "%3d\t%10d(%11d)\n", position, -1, maxTexts);
+			fprintf(f, "%3d\t%10d(%6d)\n", position, -1, maxTexts);
 		fflush(f);
 		countKeys = 0;
 		keyFlag = 0;
