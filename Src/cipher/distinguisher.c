@@ -19,7 +19,7 @@ static uint32_t key[8];
 int maxTexts = 0;
 int exitCode = 2;
 static int position;
-static int prevPos;
+static int prevPos = 0;
 static int _round;
 
 static int countKeys = 0;
@@ -456,7 +456,6 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
 	//uint32_t y, h1, h2;
 	uint32_t check[4];
 	uint32_t gamma[4];
-	char distKey[17];
 
 	//sprintf(distKey, "key = 0x%08X", roundKey_2);
 	//WARNING(distKey);
@@ -468,7 +467,8 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
 	for (n = 0; n < MAX_TEXT_NUM; ++n)
 	{
 		if (n == maxTexts)
-			generateText();
+			//generateText();
+			generateCutRoundsText();
 		in = toSTBint(pair_crypt[4 * n + inInd]);
 		out = toSTBint(pair_crypt[4 * n + outInd]);
 		in_f = toSTBint(pair_fault[4 * n + inInd]);
@@ -509,7 +509,7 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
 	{
 		k_d = 0;
 		insideRoundKey_5(0, &in, &in_f, &k_d, check[j], gamma[j], &shift_2, 0,
-				&xor, &key[5]);
+				&xor, &roundKey_2);
 		//printf("key = 0x%08X\n", k_d);
 		//sprintf(keyInfo, "key xor = 0x%08X", toSTBint(roundKey_2) ^ k_d);
 		//DEBUG(keyInfo);
@@ -733,29 +733,45 @@ void handDistinguisher()
 void autoDistinguisher_5()
 {
 	clock_t c;
-	FILE *f;
-	uint32_t key_d[8];
-	generateBytes(key, KEY_BYTE_LEN);
+	FILE *f_1, *f_2;
+	int i, j;
+	const int maxPos = 48;
+	int resultKeys[maxPos][MAX_KEYS_NUM];
+	int resultText[maxPos][MAX_KEYS_NUM];
 	_round = 8;
-	prevPos = 0;
-	f = fopen("result_key_5.txt", "w");
-	fprintf(f, "pos\tKeysnumber(texts number)%\n");
-	_round = 8;
+	f_1 = fopen("result_key_5_KeysNumber.csv", "w");
+	f_2 = fopen("result_key_5_TextNumber.csv", "w");
 	c = clock();
-	for (position = 0; position < 64; ++position)
+	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
-		distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5,
-				BLOCK_SHIFT_13);
-		if (keyFlag == 1)
-			fprintf(f, "%3d\t%10d(%6d)\n", position, countKeys, maxTexts);
-		else
-			fprintf(f, "%3d\t%10d(%6d)\n", position, -1, maxTexts);
-		fflush(f);
-		countKeys = 0;
-		keyFlag = 0;
+		generateBytes(key, KEY_BYTE_LEN);
+		for (position = 0; position < maxPos; ++position)
+		{
+			distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+			resultText[position][i] = maxTexts;
+			if (keyFlag == 1)
+				resultKeys[position][i] = countKeys;
+			else
+				resultKeys[position][i] = -1;
+			countKeys = 0;
+			keyFlag = 0;
+		}
 	}
-	fprintf(f, "time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);
-	fclose(f);
+	for (i = 0; i < position; ++i)
+	{
+		fprintf(f_1, "%3d", i);
+		fprintf(f_2, "%3d", i);
+		for (j = 0; j < MAX_KEYS_NUM; ++j)
+		{
+			fprintf(f_1, ", %10d", resultKeys[i][j]);
+			fprintf(f_2, ", %6d", resultText[i][j]);
+		}
+		fprintf(f_1, "\n");
+		fprintf(f_2, "\n");
+	}
+	printf("time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);
+	fclose(f_1);
+	fclose(f_2);
 }
 
 void autoDistinguisher()
