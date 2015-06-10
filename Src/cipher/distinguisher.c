@@ -25,7 +25,8 @@ static int _round;
 static int countKeys = 0;
 static int keyFlag = 0;
 
-//static double
+static Results k_6[64][MAX_KEYS_NUM];
+static Results k_7[64][MAX_KEYS_NUM];
 
 void printTexts(uint32_t * texts)
 {
@@ -177,7 +178,7 @@ static uint32_t distinguishRoundKey_67(const uint32_t roundKey, const int inInd,
 		switchPlotting();
 	sprintf(distKey, "key = 0x%08X", roundKey);
 	WARNING(distKey);
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
+	for (i = 0; i < ROUNDKEY_BYTE_LEN && exitCode != 0; ++i)
 	{
 		exitCode = 2;
 		// initialize g with 0
@@ -273,7 +274,7 @@ static uint32_t distinguishRoundKey_67(const uint32_t roundKey, const int inInd,
 }
 
 static void autoDistinguishRoundKey_67(const uint32_t roundKey, const int inInd,
-		const int outInd, const int shift, FILE *f)
+		const int outInd, const int shift, int * r)
 {
 	int n, counter, checked;
 	uint32_t out, in, out_f, in_f, carry, carry_f, i;
@@ -289,8 +290,7 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey, const int inInd,
 		maxTexts = 0;
 		prevPos = position;
 	}
-	fprintf(f, "%2d", position);
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8; ++i)
+	for (i = 0; i < ROUNDKEY_BYTE_LEN; ++i)
 	{
 		do
 		{
@@ -350,24 +350,20 @@ static void autoDistinguishRoundKey_67(const uint32_t roundKey, const int inInd,
 			}
 			if (n < MAX_TEXT_NUM || counter == MAX_REPEAT_NUM)
 			{
-				fprintf(f, "\t%4d (%4d)", n, n - counter);
-				fflush(f);
+				r[i] = n;
 				k_d ^= octet << (8 * i);
 				checked = 0;
 				break;
 			}
 			else if (checked == 0 || checked == 1)
 			{
-				fprintf(f, "\t%4d (%4d)", n, n);
-				fflush(f);
+				r[i] = -1;
 				checked = 4;
 				break;
 			}
 			--checked;
 		} while (checked != 0);
 	}
-	fprintf(f, "\n");
-	fflush(f);
 }
 
 static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
@@ -379,7 +375,7 @@ static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 	uint32_t k;
 	uint32_t a, b, c, index;
 	carry = carry_f = 0;
-	if (i < ROUNDKEY_BIT_LEN / 8)
+	if (i < ROUNDKEY_BYTE_LEN)
 	{
 		if (i != 0)
 		{
@@ -540,7 +536,7 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 	sprintf(distKey, "key = 0x%08X", roundKey_3);
 	WARNING(distKey);
 
-	for (i = 0; i < ROUNDKEY_BIT_LEN / 8 && exitCode != 0; ++i)
+	for (i = 0; i < ROUNDKEY_BYTE_LEN && exitCode != 0; ++i)
 	{
 		exitCode = 2;
 		// initialize g with 0
@@ -756,6 +752,7 @@ void autoDistinguisher_5()
 			countKeys = 0;
 			keyFlag = 0;
 		}
+
 	}
 	for (i = 0; i < position; ++i)
 	{
@@ -763,8 +760,8 @@ void autoDistinguisher_5()
 		fprintf(f_2, "%3d", i);
 		for (j = 0; j < MAX_KEYS_NUM; ++j)
 		{
-			fprintf(f_1, ", %10d", resultKeys[i][j]);
-			fprintf(f_2, ", %6d", resultText[i][j]);
+			fprintf(f_1, ", %d", resultKeys[i][j]);
+			fprintf(f_2, ", %d", resultText[i][j]);
 		}
 		fprintf(f_1, "\n");
 		fprintf(f_2, "\n");
@@ -775,6 +772,48 @@ void autoDistinguisher_5()
 }
 
 void autoDistinguisher()
+{
+	clock_t c;
+	int number, i, j, l;
+	const int maxPos = 32;
+	prevPos = 0;
+	FILE * f_6, *f_7;
+
+	f_6 = fopen("result_key_6.csv", "w");
+	f_7 = fopen("result_key_7.csv", "w");
+
+	_round = 8;
+	c = clock();
+	for (i = 0; i < MAX_KEYS_NUM; ++i)
+	{
+		generateBytes(key, KEY_BYTE_LEN);
+		for (position = 0; position < maxPos; ++position)
+		{
+			autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
+			autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
+		}
+	}
+	for (i = 0; i < position; ++i)
+	{
+		for (l = 0; l < ROUNDKEY_BYTE_LEN; ++l)
+		{
+			fprintf(f_6, "%3d", i);
+			fprintf(f_7, "%3d", i);
+			for (j = 0; j < MAX_KEYS_NUM; ++j)
+			{
+				fprintf(f_6, ", %d", k_6[i][j].bytes[l]);
+				fprintf(f_7, ", %d", k_7[i][j].bytes[l]);
+			}
+			fprintf(f_6, "\n");
+			fprintf(f_7, "\n");
+		}
+	}
+	printf("time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);
+	fclose(f_6);
+	fclose(f_7);
+}
+
+/*void autoDistinguisherOld()
 {
 	clock_t c;
 	int number;
@@ -824,4 +863,4 @@ void autoDistinguisher()
 	sprintf(command_7, "mv result_7.txt %s", title_7);
 	system(command_6);
 	system(command_7);
-}
+}*/
