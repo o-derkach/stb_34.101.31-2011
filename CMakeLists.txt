@@ -12,7 +12,7 @@ set(HEADER_FILES "Inc")			# Тоже самое, но для библиотеки
 
 include_directories(${HEADER_FILES})
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -O3")
 
 add_executable(main ${SRC_DIRS})	# Создает исполняемый файл с именем main
 
