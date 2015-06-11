@@ -25,8 +25,8 @@ static int _round;
 static int countKeys = 0;
 static int keyFlag = 0;
 
-static Results k_6[64][MAX_KEYS_NUM];
-static Results k_7[64][MAX_KEYS_NUM];
+//static Results k_6[128][MAX_KEYS_NUM];
+static Results k_7[128][MAX_KEYS_NUM];
 
 void printTexts(uint32_t * texts)
 {
@@ -710,15 +710,14 @@ void handDistinguisher()
 	uint32_t key_d[8];
 	generateBytes(key, KEY_BYTE_LEN);
 	_round = 7;
-	position = 0;
+	position = 64;
 	INFO("key = ");
 	printf("0x%08X 0x%08X 0x%08X\n", key[6], key[7], key[4]);
 
-	//key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, 8, 0);
+	key_d[6] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21);
 	//key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5);
 	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
-	distinguishRoundKey_4_2(key[6], key[7], key[4], BLOCK_SHIFT_21,
-			BLOCK_SHIFT_5, BLOCK_SHIFT_21);
+	//distinguishRoundKey_4_2(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
 	/*INFO("Total xor:")
 	 printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);*/
 	INFO("Total stat:");
@@ -774,12 +773,13 @@ void autoDistinguisher_5()
 void autoDistinguisher()
 {
 	clock_t c;
-	int number, i, j, l;
-	const int maxPos = 32;
+	int i, j, l;
+	const int minPos = 96;
+	const int maxPos = 128;
 	prevPos = 0;
 	FILE * f_6, *f_7;
 
-	f_6 = fopen("result_key_6.csv", "w");
+	//f_6 = fopen("result_key_6.csv", "w");
 	f_7 = fopen("result_key_7.csv", "w");
 
 	_round = 8;
@@ -787,80 +787,28 @@ void autoDistinguisher()
 	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
 		generateBytes(key, KEY_BYTE_LEN);
-		for (position = 0; position < maxPos; ++position)
+		for (position = minPos; position < maxPos; ++position)
 		{
-			autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
+			//autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
 			autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
 		}
 	}
-	for (i = 0; i < position; ++i)
+	for (i = minPos; i < position; ++i)
 	{
 		for (l = 0; l < ROUNDKEY_BYTE_LEN; ++l)
 		{
-			fprintf(f_6, "%3d", i);
+			//fprintf(f_6, "%3d", i);
 			fprintf(f_7, "%3d", i);
 			for (j = 0; j < MAX_KEYS_NUM; ++j)
 			{
-				fprintf(f_6, ", %d", k_6[i][j].bytes[l]);
+				//fprintf(f_6, ", %d", k_6[i][j].bytes[l]);
 				fprintf(f_7, ", %d", k_7[i][j].bytes[l]);
 			}
-			fprintf(f_6, "\n");
+			//fprintf(f_6, "\n");
 			fprintf(f_7, "\n");
 		}
 	}
 	printf("time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);
-	fclose(f_6);
+	//fclose(f_6);
 	fclose(f_7);
 }
-
-/*void autoDistinguisherOld()
-{
-	clock_t c;
-	int number;
-	char title_6[22];
-	char title_7[22];
-	char command_6[38];
-	char command_7[38];
-	prevPos = 0;
-	FILE * f_6, *f_7;
-	f_6 = fopen("number.txt", "r");
-	fscanf(f_6, "%d", &number);
-	fclose(f_6);
-	++number;
-	f_6 = fopen("number.txt", "w");
-	fprintf(f_6, "%d\n", number);
-	fclose(f_6);
-
-	f_6 = fopen("result_6.txt", "w");
-	f_7 = fopen("result_7.txt", "w");
-	generateBytes(key, KEY_BYTE_LEN);
-
-	fprintf(f_6, "====================\n");
-	fprintf(f_6, "Distinguish key %d\n", 6);
-	fprintf(f_6, "====================\n");
-	fprintf(f_6, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
-	fprintf(f_7, "====================\n");
-	fprintf(f_7, "Distinguish key %d\n", 7);
-	fprintf(f_7, "====================\n");
-	fprintf(f_7, "pos\t%11d\t%11d\t%11d\t%11d\n", 4, 3, 2, 1);
-	_round = 8;
-	c = clock();
-	for (position = 64; position < 96; ++position)
-	{
-		autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, f_6);
-		autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, f_7);
-	}
-	fclose(f_6);
-	fclose(f_7);
-	sprintf(title_6, "result_%d_%ld_6.txt", number,
-			(clock() - c) / CLOCKS_PER_SEC);
-	sprintf(title_7, "result_%d_%ld_7.txt", number,
-			(clock() - c) / CLOCKS_PER_SEC);
-	INFO("your results is in");
-	DEBUG(title_6);
-	DEBUG(title_7);
-	sprintf(command_6, "mv result_6.txt %s", title_6);
-	sprintf(command_7, "mv result_7.txt %s", title_7);
-	system(command_6);
-	system(command_7);
-}*/
