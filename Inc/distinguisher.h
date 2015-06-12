@@ -6,7 +6,7 @@
 
 void handDistinguisher();
 void autoDistinguisher();
-void autoDistinguisher_5();
+void autoDistinguisher_2();
 
 typedef struct {
 	int bytes[4];

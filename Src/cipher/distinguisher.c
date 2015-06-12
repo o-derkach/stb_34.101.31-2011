@@ -26,7 +26,8 @@ static int countKeys = 0;
 static int keyFlag = 0;
 
 //static Results k_6[128][MAX_KEYS_NUM];
-static Results k_7[128][MAX_KEYS_NUM];
+//static Results k_7[128][MAX_KEYS_NUM];
+static Results k_4[128][MAX_KEYS_NUM];
 
 void printTexts(uint32_t * texts)
 {
@@ -85,18 +86,9 @@ static uint32_t countDk(double gi[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT],
 			a = (gi[k][x] / n) - mean_t;
 			dk[k] += a * a;
 		}
-		//mean += dk[k];
-		//s += dk[k] * dk[k];
 		if (dk[k] > dk[max])
 			max = k;
 	}
-	/*mean /= SBLOCK_VAL_COUNT;
-	 printf("mean = %f\n", mean);
-	 s -= mean * mean;
-	 printf("var = %f\n", s);
-	 printf("sigma = %f\n", sqrt(s));
-	 printf("3 sigma = %f\n", 3 * sqrt(s));
-	 printf("3 roof = %f\n", mean + 3 * sqrt(s));*/
 	return max;
 }
 
@@ -504,16 +496,12 @@ static uint32_t distinguishRoundKey_5(const uint32_t roundKey_1,
 	for (j = 0; j < 4; ++j)
 	{
 		k_d = 0;
-		insideRoundKey_5(0, &in, &in_f, &k_d, check[j], gamma[j], &shift_2, 0,
-				&xor, &roundKey_2);
-		//printf("key = 0x%08X\n", k_d);
-		//sprintf(keyInfo, "key xor = 0x%08X", toSTBint(roundKey_2) ^ k_d);
-		//DEBUG(keyInfo);
+		insideRoundKey_5(0, &in, &in_f, &k_d, check[j], gamma[j], &shift_2, 0, &xor, &roundKey_2);
 	}
 	return k_d;
 }
 
-static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
+static uint32_t distinguishRoundKey_4_1(const uint32_t roundKey_1,
 		const uint32_t roundKey_2, const uint32_t roundKey_3, const int shift_1,
 		const int shift_2, const int shift_3)
 {
@@ -636,6 +624,113 @@ static uint32_t distinguishRoundKey_4(const uint32_t roundKey_1,
 	return toSTBint(k_d);
 }
 
+static void autoDistinguishRoundKey_4_1(const uint32_t roundKey_1,
+		const uint32_t roundKey_2, const uint32_t roundKey_3, const int shift_1,
+		const int shift_2, const int shift_3, int * r)
+{
+	int n, counter, checked;
+	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, i;
+	uint32_t k, k_d, index, octet, xor;
+	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
+	double dk[SBLOCK_VAL_COUNT];
+
+	k_d = 0;
+	carry = carry_f = 0;
+	checked = 0;
+	xor = rotLo(8, shift_3);
+	if (position != prevPos)
+	{
+		maxTexts = 0;
+		prevPos = position;
+	}
+	for (i = 0; i < ROUNDKEY_BYTE_LEN; ++i)
+	{
+		do
+		{
+			counter = 0;
+			memset(g, 0, SBLOCK_VAL_COUNT * SBLOCK_VAL_COUNT * sizeof(double));
+			if (checked == 1)
+			{
+				carry = 0;
+				carry_f = 0;
+			}
+			else if (checked == 2)
+			{
+				carry = 1;
+				carry_f = 0;
+			}
+			else if (checked == 3)
+			{
+				carry = 0;
+				carry_f = 1;
+			}
+			else if (checked == 4)
+			{
+				carry = 1;
+				carry_f = 1;
+			}
+			for (n = 0; n < MAX_TEXT_NUM && counter != MAX_REPEAT_NUM; ++n)
+			{
+				// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
+				if (n == maxTexts)
+					//generateText();
+					generateCutRoundsText();
+				in = toSTBint(pair_crypt[4 * n + 2]);
+				out = toSTBint(pair_crypt[4 * n]);
+				in_f = toSTBint(pair_fault[4 * n + 2]);
+				out_f = toSTBint(pair_fault[4 * n]);
+				outSum = sum = Gn(in + toSTBint(roundKey_1), shift_1) ^ out;
+				sum_f = Gn(in_f + toSTBint(roundKey_1), shift_1) ^ out_f;
+				outSum += sum_f;
+				outSum = rotLo(outSum, shift_3);
+
+				in = toSTBint(pair_crypt[4 * n + 1]);
+				out = toSTBint(pair_crypt[4 * n + 3]);
+				in_f = toSTBint(pair_fault[4 * n + 1]);
+				out_f = toSTBint(pair_fault[4 * n + 3]);
+				sum += Gn(in + toSTBint(roundKey_2), shift_2) ^ out;
+				sum_f += Gn(in_f + toSTBint(roundKey_2), shift_2) ^ out_f;
+				if (i != 0 && checked == 0)
+				{
+					carry = carryCount(sum, k_d, 8 * i);
+					carry_f = carryCount(sum_f, k_d, 8 * i);
+				}
+				sum = ((sum >> (8 * i)) + carry) & 0xFF;
+				sum_f = ((sum_f >> (8 * i)) + carry_f) & 0xFF;
+				for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
+				{
+					index =  sub_1[(sum + k) & 0xFF] ^ ((xor >> (8 * i)) & 0xFF);
+					index += sub_1[(sum_f + k) & 0xFF] ^ ((xor >> (8 * i)) & 0xFF);
+					//!!!! carry bit!!! for sub_1
+					index = ((outSum >> (8 * i)) - index) & 0xFF;
+					g[k][index]++;
+				}
+				//INFO("=================================================================");
+				octet = countDk(g, dk, n + 1);
+
+				if (octet == ((roundKey_3 >> (8 * (3 - i))) & 0xFF))
+					++counter;
+				else
+					counter = 0;
+			}
+			if (n < MAX_TEXT_NUM || counter == MAX_REPEAT_NUM)
+			{
+				r[i] = n;
+				k_d ^= octet << (8 * i);
+				checked = 0;
+				break;
+			}
+			else if (checked == 0 || checked == 1)
+			{
+				r[i] = -1;
+				checked = 4;
+				break;
+			}
+			--checked;
+		} while (checked != 0);
+	}
+}
+
 static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 		const uint32_t roundKey_2, const uint32_t roundKey_3, const int shift_1,
 		const int shift_2, const int shift_3)
@@ -645,15 +740,16 @@ static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 	uint32_t k_d;
 	uint32_t check[4];
 	uint32_t gamma[4];
-	char distKey[17];
+	/*char distKey[17];
 
 	sprintf(distKey, "key = 0x%08X", roundKey_3);
-	WARNING(distKey);
+	WARNING(distKey);*/
 
 	for (n = 0; n < MAX_TEXT_NUM; ++n)
 	{
 		if (n == maxTexts)
-			generateText();
+			//generateText();
+			generateCutRoundsText();
 
 		in = toSTBint(pair_crypt[4 * n + 2]);
 		out = toSTBint(pair_crypt[4 * n]);
@@ -680,10 +776,8 @@ static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 		sum += in;
 		sum_f += in_f;
 		xor = sum ^ sum_f;
-		//printf("0x%08X 0x%08X 0x%08X\n", sum, sum_f, xor);
 		if ((xor & 0xFF) && ((xor >> 8) & 0xFF) && ((xor >> 16) & 0xFF)
 				&& ((xor >> 24) & 0xFF))
-		//if (1)
 		{
 			break;
 		}
@@ -694,21 +788,21 @@ static uint32_t distinguishRoundKey_4_2(const uint32_t roundKey_1,
 	gamma[1] = 1 << shift_3;
 	gamma[2] = gamma[1] - 1;
 	gamma[3] = -1;
-	printf("%d\n", maxTexts);
-	printf("0x%08X 0x%08X\n", sum, sum_f);
+	//printf("%d\n", maxTexts);
+	//printf("0x%08X 0x%08X\n", sum, sum_f);
 	for (j = 0; j < 4; ++j)
 	{
 		k_d = 0;
-		insideRoundKey_5(0, &sum_f, &sum, &k_d, check[j], gamma[j], &shift_3, 0,
-				&xor, &key[4]);
+		insideRoundKey_5(0, &sum_f, &sum, &k_d, check[j], gamma[j], &shift_3, 0, &xor, &roundKey_3);
 	}
 	return k_d;
 }
 
 void handDistinguisher()
 {
-	uint32_t key_d[8];
+	uint32_t key_d[KEY_WORD_LEN];
 	generateBytes(key, KEY_BYTE_LEN);
+	memset(key_d, 0, sizeof(key_d));
 	_round = 7;
 	position = 64;
 	INFO("key = ");
@@ -718,31 +812,33 @@ void handDistinguisher()
 	//key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5);
 	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 	//distinguishRoundKey_4_2(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
-	/*INFO("Total xor:")
-	 printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);*/
+	INFO("Total xor:")
+	printf("0x%08X 0x%08X\n", key[6] ^ key_d[6], key[7] ^ key_d[7]);
 	INFO("Total stat:");
 	printf("\ttotal keys  = %d\n\tresult key  = %d\n\ttotal texts = %d\n",
 			countKeys, keyFlag, maxTexts);
 }
 
-void autoDistinguisher_5()
+void autoDistinguisher_2()
 {
 	clock_t c;
 	FILE *f_1, *f_2;
 	int i, j;
-	const int maxPos = 48;
+	const int minPos = 0;
+	const int maxPos = 64;
 	int resultKeys[maxPos][MAX_KEYS_NUM];
 	int resultText[maxPos][MAX_KEYS_NUM];
 	_round = 8;
-	f_1 = fopen("result_key_5_KeysNumber.csv", "w");
-	f_2 = fopen("result_key_5_TextNumber.csv", "w");
+	f_1 = fopen("result_key_4_KeysNumber.csv", "w");
+	f_2 = fopen("result_key_4_TextNumber.csv", "w");
 	c = clock();
 	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
 		generateBytes(key, KEY_BYTE_LEN);
-		for (position = 0; position < maxPos; ++position)
+		for (position = minPos; position < maxPos; ++position)
 		{
-			distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+			//distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+			distinguishRoundKey_4_2(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
 			resultText[position][i] = maxTexts;
 			if (keyFlag == 1)
 				resultKeys[position][i] = countKeys;
@@ -753,7 +849,7 @@ void autoDistinguisher_5()
 		}
 
 	}
-	for (i = 0; i < position; ++i)
+	for (i = minPos; i < position; ++i)
 	{
 		fprintf(f_1, "%3d", i);
 		fprintf(f_2, "%3d", i);
@@ -774,13 +870,15 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 96;
-	const int maxPos = 128;
+	const int minPos = 0;
+	const int maxPos = 64;
 	prevPos = 0;
-	FILE * f_6, *f_7;
+	//FILE * f_6;
+	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_7.csv", "w");
+	//f_7 = fopen("result_key_7.csv", "w");
+	f_7 = fopen("result_key_4.csv", "w");
 
 	_round = 8;
 	c = clock();
@@ -790,7 +888,8 @@ void autoDistinguisher()
 		for (position = minPos; position < maxPos; ++position)
 		{
 			//autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
-			autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
+			//autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
+			autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
 		}
 	}
 	for (i = minPos; i < position; ++i)
@@ -802,7 +901,8 @@ void autoDistinguisher()
 			for (j = 0; j < MAX_KEYS_NUM; ++j)
 			{
 				//fprintf(f_6, ", %d", k_6[i][j].bytes[l]);
-				fprintf(f_7, ", %d", k_7[i][j].bytes[l]);
+				//fprintf(f_7, ", %d", k_7[i][j].bytes[l]);
+				fprintf(f_7, ", %d", k_4[i][j].bytes[l]);
 			}
 			//fprintf(f_6, "\n");
 			fprintf(f_7, "\n");
