@@ -885,7 +885,6 @@ static void autoDistinguishRoundKey_3(const uint32_t roundKey_1,
 				{
 					index =  sub_1[(in + k) & 0xFF];
 					index += sub_1[(in_f + k) & 0xFF];
-					//!!!! carry bit!!! for sub_1
 					index = ((outSum >> (8 * i)) + index) & 0xFF;
 					g[k][index]++;
 				}
@@ -988,8 +987,8 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 0;
-	const int maxPos = 128;
+	const int minPos = 64;
+	const int maxPos = 96;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
@@ -997,7 +996,7 @@ void autoDistinguisher()
 	//f_6 = fopen("result_key_6.csv", "w");
 	//f_7 = fopen("result_key_7.csv", "w");
 	//f_7 = fopen("result_key_4.csv", "w");
-	f_7 = fopen("result_key_4_7r.csv", "w");
+	f_7 = fopen("result_key_3.csv", "w");
 
 	_round = 7;
 	c = clock();
@@ -1009,10 +1008,10 @@ void autoDistinguisher()
 			printf("position = %d\n", position);
 			//autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
 			//autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
-			autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
-			/*autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3],
+			//autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
+			autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3],
 					BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21,
-					BLOCK_SHIFT_13, k_4[position][i].bytes);*/
+					BLOCK_SHIFT_13, k_4[position][i].bytes);
 		}
 	}
 	for (i = minPos; i < position; ++i)
@@ -1023,9 +1022,9 @@ void autoDistinguisher()
 			fprintf(f_7, "%3d", i);
 			for (j = 0; j < MAX_KEYS_NUM; ++j)
 			{
-				//fprintf(f_6, ", %d", k_6[i][j].bytes[l]);
-				//fprintf(f_7, ", %d", k_7[i][j].bytes[l]);
-				fprintf(f_7, ", %d", k_4[i][j].bytes[l]);
+				//fprintf(f_6, "; %d", k_6[i][j].bytes[l]);
+				//fprintf(f_7, "; %d", k_7[i][j].bytes[l]);
+				fprintf(f_7, "; %d", k_4[i][j].bytes[l]);
 			}
 			//fprintf(f_6, "\n");
 			fprintf(f_7, "\n");
