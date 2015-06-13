@@ -987,8 +987,8 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 64;
-	const int maxPos = 96;
+	const int minPos = 0;
+	const int maxPos = 32;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
@@ -996,9 +996,9 @@ void autoDistinguisher()
 	//f_6 = fopen("result_key_6.csv", "w");
 	//f_7 = fopen("result_key_7.csv", "w");
 	//f_7 = fopen("result_key_4.csv", "w");
-	f_7 = fopen("result_key_3.csv", "w");
+	f_7 = fopen("result_key_3_8r.csv", "w");
 
-	_round = 7;
+	_round = 8;
 	c = clock();
 	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
