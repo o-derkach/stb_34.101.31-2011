@@ -2,7 +2,7 @@
 #define DISTINGUISHER_H_
 
 #define MAX_REPEAT_NUM 256
-#define MAX_KEYS_NUM 1
+#define MAX_KEYS_NUM 100
 
 void handDistinguisher();
 void autoDistinguisher();
