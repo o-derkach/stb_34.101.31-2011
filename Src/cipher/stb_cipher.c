@@ -255,16 +255,16 @@ void cryptTwoRoundsWithFault(const uint32_t *in, const uint32_t *key, uint32_t *
 		x = a1 + k[7 * i - 7];
 		x = Gn(x, BLOCK_SHIFT_5);
 		b1 ^= x;
+		/*if (i == 8)
+		{
+			printf("a1 = %08X\n", a1);
+			printf("b1 = %08X\n", b1);
+		}*/
 
 		//2 step
 		x = d1 + k[7 * i - 6];
 		x = Gn(x, BLOCK_SHIFT_21);
 		c1 ^= x;
-		/*if (i == 8)
-		{
-			printf("c = %08X\n", c1);
-			printf("d = %08X\n", d1);
-		}*/
 
 		//3 step
 		x = b1 + k[7 * i - 5];

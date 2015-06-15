@@ -27,7 +27,7 @@ static int keyFlag = 0;
 
 //static Results k_6[128][MAX_KEYS_NUM];
 //static Results k_7[128][MAX_KEYS_NUM];
-static Results k[128][MAX_KEYS_NUM];
+static Results k_4[128][MAX_KEYS_NUM];
 
 void printTexts(uint32_t * texts)
 {
@@ -390,8 +390,7 @@ static void insideRoundKey_5(const uint32_t i, const uint32_t * in,
 			{
 				//printf("k = 0x%02X\n", k);
 				(*k_d) ^= k << (8 * i);
-				insideRoundKey_5(i + 1, in, in_f, k_d, check, gamma, shift, c,
-						xor, checkKey);
+				insideRoundKey_5(i + 1, in, in_f, k_d, check, gamma, shift, c, xor, checkKey);
 				(*k_d) ^= k << (8 * i);
 			}
 		}
@@ -1221,10 +1220,10 @@ static void autoDistinguishRoundKey_2_1(const uint32_t roundKey_1,
 }
 
 static void insideRoundKey_2(const uint32_t i, const uint32_t * in,
-		const uint32_t * in_f, const uint32_t * out, const uint32_t * out_f,
+		const uint32_t * in_f, const uint32_t * sum,
 		uint32_t * k_d, const uint32_t * checkKey)
 {
-	uint32_t in1, in_f1, out1, out_f1, carry, carry_f;
+	uint32_t in1, in_f1, sum1, carry, carry_f;
 	uint32_t k;
 	uint32_t index;
 	carry = carry_f = 0;
@@ -1237,17 +1236,16 @@ static void insideRoundKey_2(const uint32_t i, const uint32_t * in,
 		}
 		in1 = ((*in >> (8 * i)) + carry) & 0xFF;
 		in_f1 = ((*in_f >> (8 * i)) + carry_f) & 0xFF;
-		out1 = (*out >> (8 * i)) & 0xFF;
-		out_f1 = (*out_f >> (8 * i)) & 0xFF;
+		sum1 = (*sum >> (8 * i)) & 0xFF;
 
 		for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
 		{
-			index = sub_1[(in1 + k) & 0xFF] ^ out1 ^ sub_1[(in_f1 + k) & 0xFF] ^ out_f1;
+			index = sub_1[(in1 + k) & 0xFF] ^ sub_1[(in_f1 + k) & 0xFF] ^ sum1;
 			if (index == 0)
 			{
 				//printf("k = 0x%02X\n", k);
 				(*k_d) ^= k << (8 * i);
-				insideRoundKey_2(i + 1, in, in_f, out, out_f, k_d, checkKey);
+				insideRoundKey_2(i + 1, in, in_f, sum, k_d, checkKey);
 				(*k_d) ^= k << (8 * i);
 			}
 		}
@@ -1255,14 +1253,10 @@ static void insideRoundKey_2(const uint32_t i, const uint32_t * in,
 	else
 	{
 		++countKeys;
-		//INFO("=========================================================");
-		//printf("key xor = 0x%08X\n", *k_d ^ toSTBint(*checkKey));
 		if ((*k_d ^ toSTBint(*checkKey)) == 0)
 		{
 			++keyFlag;
-			//ERROR("!!!");
 		}
-		//INFO("=========================================================");
 	}
 }
 
@@ -1280,6 +1274,7 @@ static void distinguishRoundKey_2_2(const uint32_t roundKey_1,
 		maxTexts = 0;
 		prevPos = position;
 	}
+	maxTexts = 0;
 	for (n = 0; n < MAX_TEXT_NUM; ++n)
 	{
 		if (n == maxTexts)
@@ -1317,13 +1312,125 @@ static void distinguishRoundKey_2_2(const uint32_t roundKey_1,
 			break;
 		}
 	}
-	out = rotLo(out, BLOCK_SHIFT_21);
-	out_f = rotLo(out_f, BLOCK_SHIFT_21);
-	//printf("%d\n", maxTexts);
-	//printf("0x%08X 0x%08X\n", sum, sum_f);
+	sum = out ^ out_f;
+	sum = rotLo(sum, BLOCK_SHIFT_21);
 	k_d = 0;
-	insideRoundKey_2(0, &in, &in_f, &out, &out_f, &k_d, &roundKey_5);
-	//return k_d;
+	insideRoundKey_2(0, &in, &in_f, &sum, &k_d, &roundKey_5);
+}
+
+static void autoDistinguishRoundKey_1(const uint32_t roundKey_1,
+		const uint32_t roundKey_2, const uint32_t roundKey_3,
+		const uint32_t roundKey_4, const uint32_t roundKey_5, int * r)
+{
+	int n, counter, checked;
+	uint32_t out, in, out_f, in_f, sum, sum_f, carry, carry_f, i;
+	uint32_t k, k_d, index, octet, xor;
+	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
+	double dk[SBLOCK_VAL_COUNT];
+
+	k_d = 0;
+	carry = carry_f = 0;
+	checked = 0;
+	xor = 8;
+	if (position != prevPos)
+	{
+		maxTexts = 0;
+		prevPos = position;
+	}
+	for (i = 0; i < ROUNDKEY_BYTE_LEN; ++i)
+	{
+		do
+		{
+			counter = 0;
+			memset(g, 0, SBLOCK_VAL_COUNT * SBLOCK_VAL_COUNT * sizeof(double));
+			if (checked == 1)
+			{
+				carry = 0;
+				carry_f = 0;
+			}
+			else if (checked == 2)
+			{
+				carry = 1;
+				carry_f = 0;
+			}
+			else if (checked == 3)
+			{
+				carry = 0;
+				carry_f = 1;
+			}
+			else if (checked == 4)
+			{
+				carry = 1;
+				carry_f = 1;
+			}
+			for (n = 0; n < MAX_TEXT_NUM && counter != MAX_REPEAT_NUM; ++n)
+			{
+				// generation of texts and pairs of cipher text and fault cipher text if exitCode == 1;
+				if (n == maxTexts)
+					generateCutRoundsText();
+
+				in = toSTBint(pair_crypt[4 * n + 1]);
+				out = toSTBint(pair_crypt[4 * n + 3]);
+				in_f = toSTBint(pair_fault[4 * n + 1]);
+				out_f = toSTBint(pair_fault[4 * n + 3]);
+				sum = Gn(in + toSTBint(roundKey_2), BLOCK_SHIFT_5) ^ out;
+				sum_f = Gn(in_f + toSTBint(roundKey_2), BLOCK_SHIFT_5) ^ out_f;
+
+				in = toSTBint(pair_crypt[4 * n + 2]);
+				out = toSTBint(pair_crypt[4 * n]);
+				in_f = toSTBint(pair_fault[4 * n + 2]);
+				out_f = toSTBint(pair_fault[4 * n]);
+				out = Gn(in + toSTBint(roundKey_1), BLOCK_SHIFT_21) ^ out;
+				out_f = Gn(in_f + toSTBint(roundKey_1), BLOCK_SHIFT_21) ^ out_f;
+				sum += out;
+				sum_f += out_f;
+
+				out -= (Gn(sum + toSTBint(roundKey_3), BLOCK_SHIFT_21) ^ xor);
+				out_f -= (Gn(sum_f + toSTBint(roundKey_3), BLOCK_SHIFT_21) ^ xor);
+				in += Gn(out + toSTBint(roundKey_4), BLOCK_SHIFT_13);
+				in_f += Gn(out_f + toSTBint(roundKey_4), BLOCK_SHIFT_13);
+				/*printf("in =  %08X %08X\n", in, in_f);
+				printf("out = %08X %08X\n", out, out_f);
+				getchar();
+				getchar();*/
+
+				if (i != 0 && checked == 0)
+				{
+					carry = carryCount(in, k_d, 8 * i);
+					carry_f = carryCount(in_f, k_d, 8 * i);
+				}
+				in = ((in >> (8 * i)) + carry) & 0xFF;
+				in_f = ((in_f >> (8 * i)) + carry_f) & 0xFF;
+				for (k = 0; k < SBLOCK_VAL_COUNT; ++k)
+				{
+					index = (rotLo(out ^ out_f, BLOCK_SHIFT_5) >> (8 * i)) & 0xFF;
+					index ^= sub_1[(in + k) & 0xFF] ^ sub_1[(in_f + k) & 0xFF];
+					g[k][index]++;
+				}
+				//INFO("=================================================================");
+				octet = countDk(g, dk, n + 1);
+
+				if (octet == ((roundKey_5 >> (8 * (3 - i))) & 0xFF))
+					++counter;
+				else
+					counter = 0;
+			}
+			if (n < MAX_TEXT_NUM || counter == MAX_REPEAT_NUM)
+			{
+				r[i] = n;
+				k_d ^= octet << (8 * i);
+				checked = 0;
+				break;
+			}
+			else if (checked == 0 || checked == 1)
+			{
+				r[i] = -1;
+				checked = 4;
+				break;
+			}
+			--checked;
+		} while (checked != 0);
+	}
 }
 
 void handDistinguisher()
@@ -1337,7 +1444,7 @@ void handDistinguisher()
 	printf("0x%08X 0x%08X 0x%08X\n", key[6], key[7], key[4]);
 
 	//key_d[3] = distinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21);
-	autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k[position][0].bytes);
+	autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][0].bytes);
 	//key_d[7] = distinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5);
 	//key_d[5] = distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 	//distinguishRoundKey_4_2(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21);
@@ -1423,27 +1530,28 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 16;
-	const int maxPos = 64;
+	const int minPos = 94;
+	const int maxPos = 96;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_2_7r.csv", "w");
+	f_7 = fopen("result_key_1_7r.csv.94-96", "w");
 
 	_round = 7;
 	c = clock();
 	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
-		printf("i = %d\n", i);
+		//printf("i = %d\n", i);
 		generateBytes(key, KEY_BYTE_LEN);
 		for (position = minPos; position < maxPos; ++position)
 		{
 			//printf("position = %d\n", position);
 			//autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
 			//autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
-			autoDistinguishRoundKey_2_1(key[6], key[7], key[5], key[4], key[2], k[position][i].bytes);
+			//autoDistinguishRoundKey_2_1(key[6], key[7], key[5], key[4], key[2], k_4[position][i].bytes);
+			autoDistinguishRoundKey_1(key[6], key[7], key[4], key[3], key[1], k_4[position][i].bytes);
 			/*autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);*/
 			//autoDistinguishRoundKey_5_2(key[7], key[6], BLOCK_SHIFT_5, BLOCK_SHIFT_13, k_4[position][i].bytes);
 		}
@@ -1458,7 +1566,7 @@ void autoDistinguisher()
 			{
 				//fprintf(f_6, "; %d", k_6[i][j].bytes[l]);
 				//fprintf(f_7, "; %d", k_7[i][j].bytes[l]);
-				fprintf(f_7, "; %d", k[i][j].bytes[l]);
+				fprintf(f_7, "; %d", k_4[i][j].bytes[l]);
 			}
 			//fprintf(f_6, "\n");
 			fprintf(f_7, "\n");
