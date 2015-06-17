@@ -1463,12 +1463,12 @@ void autoDistinguisher_2()
 	clock_t c;
 	FILE *f_1, *f_2;
 	int i, j;
-	const int minPos = 48;
-	const int maxPos = 64;
+	const int minPos = 32;
+	const int maxPos = 48;
 
 	_round = 8;
-	f_1 = fopen("result_key_5_KeysNumber_48-64.csv", "w");
-	f_2 = fopen("result_key_5_TextNumber_48-64.csv", "w");
+	f_1 = fopen("result_key_5_KeysNumber_32-48.csv", "w");
+	f_2 = fopen("result_key_5_TextNumber_32-48.csv", "w");
 	c = clock();
 	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
