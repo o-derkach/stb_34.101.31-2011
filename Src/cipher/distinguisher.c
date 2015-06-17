@@ -1455,29 +1455,30 @@ void handDistinguisher()
 			countKeys, keyFlag, maxTexts);
 }
 
-//int resultKeys[128][MAX_KEYS_NUM];
-//int resultText[128][MAX_KEYS_NUM];
+int resultKeys[96][MAX_KEYS_NUM];
+int resultText[96][MAX_KEYS_NUM];
 
 void autoDistinguisher_2()
 {
 	clock_t c;
 	FILE *f_1, *f_2;
-	int i;
-	const int minPos = 64;
-	const int maxPos = 128;
+	int i, j;
+	const int minPos = 48;
+	const int maxPos = 64;
 
-	_round = 7;
-	f_1 = fopen("result_key_2_KeysNumber.csv", "w");
-	f_2 = fopen("result_key_2_TextNumber.csv", "w");
+	_round = 8;
+	f_1 = fopen("result_key_5_KeysNumber_48-64.csv", "w");
+	f_2 = fopen("result_key_5_TextNumber_48-64.csv", "w");
 	c = clock();
-	/*for (i = 0; i < MAX_KEYS_NUM; ++i)
+	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
+		printf("i = %d\n", i);
 		generateBytes(key, KEY_BYTE_LEN);
 		for (position = minPos; position < maxPos; ++position)
 		{
-			//distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+			distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 			//distinguishRoundKey_4_2(key[6], key[7], key[4]);
-			distinguishRoundKey_2_2(key[6], key[7], key[5], key[4], key[2]);
+			//distinguishRoundKey_2_2(key[6], key[7], key[5], key[4], key[2]);
 			resultText[position][i] = maxTexts;
 			if (keyFlag == 1)
 				resultKeys[position][i] = countKeys;
@@ -1499,16 +1500,16 @@ void autoDistinguisher_2()
 		}
 		fprintf(f_1, "\n");
 		fprintf(f_2, "\n");
-	}*/
-	for (position = minPos; position < maxPos; ++position)
+	}
+	/*for (position = minPos; position < maxPos; ++position)
 	{
 		fprintf(f_1, "%3d", position);
 		fprintf(f_2, "%3d", position);
 		for (i = 0; i < MAX_KEYS_NUM; ++i) {
 			generateBytes(key, KEY_BYTE_LEN);
-			//distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
+			distinguishRoundKey_5(key[7], key[5], 1, 3, BLOCK_SHIFT_5, BLOCK_SHIFT_13);
 			//distinguishRoundKey_4_2(key[6], key[7], key[4]);
-			distinguishRoundKey_2_2(key[6], key[7], key[5], key[4], key[2]);
+			//distinguishRoundKey_2_2(key[6], key[7], key[5], key[4], key[2]);
 			fprintf(f_2, "; %d", maxTexts);
 			if (keyFlag == 1)
 				fprintf(f_1, "; %d", countKeys);
@@ -1521,7 +1522,7 @@ void autoDistinguisher_2()
 		fprintf(f_1, "\n");
 		fprintf(f_2, "\n");
 	}
-	printf("time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);
+	printf("time = %ld\n", (clock() - c) / CLOCKS_PER_SEC);*/
 	fclose(f_1);
 	fclose(f_2);
 }

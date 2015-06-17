@@ -5,6 +5,6 @@ int main()
 {
 	srand(time(NULL));
 	//handDistinguisher();
-	autoDistinguisher();
+	autoDistinguisher_2();
 	return 0;
 }
