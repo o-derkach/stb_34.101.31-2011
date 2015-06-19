@@ -723,7 +723,7 @@ static void autoDistinguishRoundKey_4_1(const uint32_t roundKey_1,
 		const int shift_2, const int shift_3, int * r)
 {
 	int n, counter, checked;
-	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, i;
+	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, b_carry, i;
 	uint32_t k, k_d, index, octet, xor;
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
 	double dk[SBLOCK_VAL_COUNT];
@@ -784,6 +784,24 @@ static void autoDistinguishRoundKey_4_1(const uint32_t roundKey_1,
 				out_f = toSTBint(pair_fault[4 * n + 3]);
 				sum += Gn(in + toSTBint(roundKey_2), shift_2) ^ out;
 				sum_f += Gn(in_f + toSTBint(roundKey_2), shift_2) ^ out_f;
+
+				b_carry = 0;
+				if (i != 0)
+				{
+					int j;
+					uint32_t in1, in1_f;
+					for (j = 0; j < i; ++j)
+					{
+						in1 = ((sum >> (8 * j)) + carry) & 0xFF;
+						in1_f = ((sum_f >> (8 * j)) + carry_f) & 0xFF;
+						index = sub_1[(in1 + ((roundKey_3 >> (8 * (3 - j))) & 0xFF)) & 0xFF];
+						index += sub_1[(in1_f	+ ((roundKey_3 >> (8 * (3 - j))) & 0xFF)) & 0xFF];
+						if (((outSum >> (8 * j)) && 0xFF) < index + b_carry)
+							b_carry = 1;
+						else
+							b_carry = 0;
+					}
+				}
 				if (i != 0 && checked == 0)
 				{
 					carry = carryCount(sum, k_d, 8 * i);
@@ -796,7 +814,7 @@ static void autoDistinguishRoundKey_4_1(const uint32_t roundKey_1,
 					index =  sub_1[(sum + k) & 0xFF] ^ ((xor >> (8 * i)) & 0xFF);
 					index += sub_1[(sum_f + k) & 0xFF] ^ ((xor >> (8 * i)) & 0xFF);
 					//!!!! carry bit!!! for sub_1
-					index = ((outSum >> (8 * i)) - index) & 0xFF;
+					index = ((outSum >> (8 * i)) - index - b_carry) & 0xFF;
 					g[k][index]++;
 				}
 				//INFO("=================================================================");
@@ -889,7 +907,7 @@ static void autoDistinguishRoundKey_4_4(const uint32_t roundKey_1,
 		const uint32_t roundKey_2, const uint32_t roundKey_3, int * r)
 {
 	int n, counter, checked;
-	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, i;
+	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, b_carry, i;
 	uint32_t k, k_d, index, octet, xor;
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
 	double dk[SBLOCK_VAL_COUNT];
@@ -951,6 +969,20 @@ static void autoDistinguishRoundKey_4_4(const uint32_t roundKey_1,
 				sum += Gn(in + toSTBint(roundKey_1), BLOCK_SHIFT_21) ^ out;
 				sum_f += Gn(in_f + toSTBint(roundKey_1), BLOCK_SHIFT_21) ^ out_f;
 
+				b_carry = 0;
+				if (i != 0)
+				{
+					int j;
+					uint32_t in1, in1_f;
+					for (j = 0; j < i; ++j)
+					{
+						in1 = ((sum >> (8 * j)) + carry) & 0xFF;
+						in1_f = ((sum_f >> (8 * j)) + carry_f) & 0xFF;
+						index = sub_1[(in1 + ((roundKey_3 >> (8 * (3 - j))) & 0xFF)) & 0xFF];
+						index += sub_1[(in1_f + ((roundKey_3 >> (8 * (3 - j))) & 0xFF)) & 0xFF];
+						b_carry = (((outSum >> (8 * j)) & 0xFF) + index + b_carry) >> (8 * (j + 1));
+					}
+				}
 				if (i != 0 && checked == 0)
 				{
 					carry = carryCount(sum, k_d, 8 * i);
@@ -962,7 +994,7 @@ static void autoDistinguishRoundKey_4_4(const uint32_t roundKey_1,
 				{
 					index =  sub_1[(sum + k) & 0xFF] ^ ((xor >> (8 * i)) & 0xFF);
 					index += sub_1[(sum_f + k) & 0xFF] ^ ((xor >> (8 * i)) & 0xFF);
-					index = ((outSum >> (8 * i)) + index) & 0xFF;
+					index = ((outSum >> (8 * i)) + index + b_carry) & 0xFF;
 					g[k][index]++;
 				}
 				//INFO("=================================================================");
@@ -1067,14 +1099,21 @@ static void autoDistinguishRoundKey_3(const uint32_t roundKey_1,
 				getchar();*/
 
 				b_carry = 0;
+				if (i != 0)
+				{
+					int j;
+					uint32_t in1, in1_f;
+					for (j = 0; j < i; ++j)
+					{
+						in1 = ((in >> (8 * j)) + carry) & 0xFF;
+						in1_f = ((in_f >> (8 * j)) + carry_f) & 0xFF;
+						index = sub_1[(in1 + ((roundKey_4 >> (8 * (3 - j))) & 0xFF)) & 0xFF];
+						index += sub_1[(in1_f	+ ((roundKey_4 >> (8 * (3 - j))) & 0xFF)) & 0xFF];
+						b_carry = (((outSum >> (8 * j)) & 0xFF) + index + b_carry) >> (8 * (j + 1));
+					}
+				}
 				if (i != 0 && checked == 0)
 				{
-					uint32_t in1, in1_f;
-					in1 = ((in >> (8 * (i-1))) + carry) & 0xFF;
-					in1_f = ((in_f >> (8 * (i-1))) + carry_f) & 0xFF;
-					b_carry =  sub_1[(in1 + (k_d >> (8 * (i-1)))) & 0xFF];
-					b_carry += sub_1[(in1_f + (k_d >> (8 * (i-1)))) & 0xFF];
-					b_carry = ((outSum >> (8 * (i-1))) + b_carry) >> (8 * i);
 					carry = carryCount(in, k_d, 8 * i);
 					carry_f = carryCount(in_f, k_d, 8 * i);
 				}
