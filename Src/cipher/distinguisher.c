@@ -1602,7 +1602,7 @@ void autoDistinguisher()
 			//autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_5_2(key[7], key[6], BLOCK_SHIFT_5, BLOCK_SHIFT_13, k_4[position][i].bytes);
 			//autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
-			autoDistinguishRoundKey_4_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
+			autoDistinguishRoundKey_4_4(key[6], key[7], key[4], k_4[position][i].bytes);
 		}
 	}
 	for (i = minPos; i < position; ++i)
