@@ -1577,14 +1577,14 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 32;
-	const int maxPos = 64;
+	const int minPos = 64;
+	const int maxPos = 96;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_4_8r.csv.32-64", "w");
+	f_7 = fopen("result_key_4_8r.csv.64-96", "w");
 
 	_round = 8;
 	c = clock();
@@ -1601,8 +1601,8 @@ void autoDistinguisher()
 			//autoDistinguishRoundKey_1(key[6], key[7], key[4], key[3], key[1], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_5_2(key[7], key[6], BLOCK_SHIFT_5, BLOCK_SHIFT_13, k_4[position][i].bytes);
-			autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
-			//autoDistinguishRoundKey_4_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
+			//autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
+			autoDistinguishRoundKey_4_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
 		}
 	}
 	for (i = minPos; i < position; ++i)
