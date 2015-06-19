@@ -1577,14 +1577,14 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 64;
-	const int maxPos = 96;
+	const int minPos = 96;
+	const int maxPos = 128;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_4_8r.csv.64-96", "w");
+	f_7 = fopen("result_key_4_8r.csv.96-128", "w");
 
 	_round = 8;
 	c = clock();
