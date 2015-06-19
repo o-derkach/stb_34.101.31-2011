@@ -996,7 +996,7 @@ static void autoDistinguishRoundKey_3(const uint32_t roundKey_1,
 		const uint32_t roundKey_4, int * r)
 {
 	int n, counter, checked;
-	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, i;
+	uint32_t out, in, out_f, in_f, sum, sum_f, outSum, carry, carry_f, b_carry, i;
 	uint32_t k, k_d, index, octet, xor;
 	double g[SBLOCK_VAL_COUNT][SBLOCK_VAL_COUNT];
 	double dk[SBLOCK_VAL_COUNT];
@@ -1066,8 +1066,15 @@ static void autoDistinguishRoundKey_3(const uint32_t roundKey_1,
 				getchar();
 				getchar();*/
 
+				b_carry = 0;
 				if (i != 0 && checked == 0)
 				{
+					uint32_t in1, in1_f;
+					in1 = ((in >> (8 * (i-1))) + carry) & 0xFF;
+					in1_f = ((in_f >> (8 * (i-1))) + carry_f) & 0xFF;
+					b_carry =  sub_1[(in1 + (k_d >> (8 * (i-1)))) & 0xFF];
+					b_carry += sub_1[(in1_f + (k_d >> (8 * (i-1)))) & 0xFF];
+					b_carry = ((outSum >> (8 * (i-1))) + b_carry) >> (8 * i);
 					carry = carryCount(in, k_d, 8 * i);
 					carry_f = carryCount(in_f, k_d, 8 * i);
 				}
@@ -1077,7 +1084,7 @@ static void autoDistinguishRoundKey_3(const uint32_t roundKey_1,
 				{
 					index =  sub_1[(in + k) & 0xFF];
 					index += sub_1[(in_f + k) & 0xFF];
-					index = ((outSum >> (8 * i)) + index) & 0xFF;
+					index = ((outSum >> (8 * i)) + index + b_carry) & 0xFF;
 					g[k][index]++;
 				}
 				//INFO("=================================================================");
@@ -1531,29 +1538,29 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 94;
-	const int maxPos = 96;
+	const int minPos = 24;
+	const int maxPos = 32;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_1_7r.csv.94-96", "w");
+	f_7 = fopen("result_key_3_8r.csv.24-32", "w");
 
-	_round = 7;
+	_round = 8;
 	c = clock();
 	for (i = 0; i < MAX_KEYS_NUM; ++i)
 	{
-		//printf("i = %d\n", i);
+		printf("i = %d\n", i);
 		generateBytes(key, KEY_BYTE_LEN);
 		for (position = minPos; position < maxPos; ++position)
 		{
-			//printf("position = %d\n", position);
+			printf("position = %d\n", position);
 			//autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
 			//autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
 			//autoDistinguishRoundKey_2_1(key[6], key[7], key[5], key[4], key[2], k_4[position][i].bytes);
-			autoDistinguishRoundKey_1(key[6], key[7], key[4], key[3], key[1], k_4[position][i].bytes);
-			/*autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);*/
+			//autoDistinguishRoundKey_1(key[6], key[7], key[4], key[3], key[1], k_4[position][i].bytes);
+			autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_5_2(key[7], key[6], BLOCK_SHIFT_5, BLOCK_SHIFT_13, k_4[position][i].bytes);
 		}
 	}
