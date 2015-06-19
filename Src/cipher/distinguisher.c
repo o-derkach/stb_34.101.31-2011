@@ -1577,14 +1577,14 @@ void autoDistinguisher()
 {
 	clock_t c;
 	int i, j, l;
-	const int minPos = 24;
+	const int minPos = 0;
 	const int maxPos = 32;
 	prevPos = 0;
 	//FILE * f_6;
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_3_8r.csv.24-32", "w");
+	f_7 = fopen("result_key_4_8r.csv.0-32", "w");
 
 	_round = 8;
 	c = clock();
@@ -1594,13 +1594,15 @@ void autoDistinguisher()
 		generateBytes(key, KEY_BYTE_LEN);
 		for (position = minPos; position < maxPos; ++position)
 		{
-			printf("position = %d\n", position);
+			//printf("position = %d\n", position);
 			//autoDistinguishRoundKey_67(key[6], 2, 0, BLOCK_SHIFT_21, k_6[position][i].bytes);
 			//autoDistinguishRoundKey_67(key[7], 1, 3, BLOCK_SHIFT_5, k_7[position][i].bytes);
 			//autoDistinguishRoundKey_2_1(key[6], key[7], key[5], key[4], key[2], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_1(key[6], key[7], key[4], key[3], key[1], k_4[position][i].bytes);
-			autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);
+			//autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_5_2(key[7], key[6], BLOCK_SHIFT_5, BLOCK_SHIFT_13, k_4[position][i].bytes);
+			autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
+			//autoDistinguishRoundKey_4_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
 		}
 	}
 	for (i = minPos; i < position; ++i)
