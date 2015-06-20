@@ -1584,7 +1584,7 @@ void autoDistinguisher()
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_3_7r.csv.88-96, "w");
+	f_7 = fopen("result_key_3_7r.csv.88-96", "w");
 
 	_round = 7;
 	c = clock();
@@ -1602,11 +1602,7 @@ void autoDistinguisher()
 			autoDistinguishRoundKey_3(key[6], key[7], key[4], key[3], k_4[position][i].bytes);
 			//autoDistinguishRoundKey_5_2(key[7], key[6], BLOCK_SHIFT_5, BLOCK_SHIFT_13, k_4[position][i].bytes);
 			//autoDistinguishRoundKey_4_1(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
-<<<<<<< HEAD
-			autoDistinguishRoundKey_4_4(key[6], key[7], key[4], k_4[position][i].bytes);
-=======
 			//autoDistinguishRoundKey_4_4(key[6], key[7], key[4], BLOCK_SHIFT_21, BLOCK_SHIFT_5, BLOCK_SHIFT_21, k_4[position][i].bytes);
->>>>>>> one
 		}
 	}
 	for (i = minPos; i < position; ++i)
