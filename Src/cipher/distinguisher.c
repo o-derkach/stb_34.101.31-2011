@@ -1584,7 +1584,7 @@ void autoDistinguisher()
 	FILE * f_7;
 
 	//f_6 = fopen("result_key_6.csv", "w");
-	f_7 = fopen("result_key_3_8r.csv.88-96, "w");
+	f_7 = fopen("result_key_3_7r.csv.88-96, "w");
 
 	_round = 7;
 	c = clock();
